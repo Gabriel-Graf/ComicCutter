@@ -15,9 +15,46 @@ class PanelDetector(
     private val minPanelAreaFraction: Double = 0.01,
     private val containmentFraction: Double = 0.8,
 ) {
+    private companion object {
+        /** Obergrenze für Flood-Rescue-Boxen; darüber zersplittert das Flood vermutlich einen Splash. */
+        const val MAX_FLOOD_RESCUE = 5
+    }
 
     fun detect(page: RenderedPage, direction: ReadingDirection): List<PanelRect> {
         if (page.width <= 0 || page.height <= 0 || page.pixels.isEmpty()) return emptyList()
+        return ReadingOrder.sort(detectSinglePage(page), direction)
+    }
+
+    /**
+     * Erkennt Panels einer einzelnen Seite (unsortiert). Primär der kombinierte Profil-XY-Cut
+     * ([GutterProfileCut]) — gegen Hand-GT messbar robuster als das Weißgutter-Flood, weil er weiße
+     * (auch von Blasen überbrückte) UND dunkle Gassen color-agnostisch trennt. Liefert er <2 Panels
+     * (echte full-bleed-Splash-Seite oder unteilbar), greift das Flood als Sicherheitsnetz.
+     */
+    private fun detectSinglePage(page: RenderedPage): List<PanelRect> {
+        if (page.width <= 0 || page.height <= 0 || page.pixels.isEmpty()) return emptyList()
+        val profile = gutterProfileDetect(page)
+        if (profile.size >= 2) return profile
+        // Profil fand keine Gasse (full-bleed-Splash ODER weiße Gassen, die der Projektion entgehen,
+        // weil Blasen/Text die Zeilen-/Spalten-Statistik stören). Das Weißgutter-Flood ist hier
+        // komplementär: bei einem echten Splash findet es ebenfalls nichts (1 Box), bei einem
+        // verpassten Mehr-Panel-Layout aber das vom Rand erreichbare Gutter-Netz.
+        val flood = floodDetect(page)
+        if (flood.size in 2..MAX_FLOOD_RESCUE) return flood
+        // Sonst das Profil-Ergebnis behalten (1 Panel = Splash). Nur wenn das Profil GAR nichts fand
+        // (blanke/synthetische Fläche), liefert das Flood das einzelne Vollseiten-Panel.
+        return profile.ifEmpty { flood }
+    }
+
+    /**
+     * Kombinierter Profil-XY-Cut. Die Guillotine-Kacheln sind konstruktionsbedingt disjunkt, daher
+     * KEINE Containment-Nachfilter (die würden hier nur valide Panels kosten — gemessen ~0.09 Recall).
+     */
+    private fun gutterProfileDetect(page: RenderedPage): List<PanelRect> =
+        GutterProfileCut.detect(page)
+
+    /** Weißgutter-Flood-Pfad (Edge-Seed-Flood → Komponenten → Rahmen-Split) inkl. Nachfilter. */
+    private fun floodDetect(page: RenderedPage): List<PanelRect> {
         val threshold = ImageBinarization.otsuThreshold(page)
         val background = ImageBinarization.backgroundMask(page, threshold)
         val flooded = GutterFill.floodFromEdges(background, page.width, page.height)
@@ -26,7 +63,6 @@ class PanelDetector(
         val minArea = page.width.toLong() * page.height * minPanelAreaFraction
         val filtered = regions.filter { it.width.toLong() * it.height >= minArea }
 
-        // Dunkle Maske (Inverse der Hintergrundmaske) für BorderLineSplit aufbereiten
         val darkMask = BooleanArray(background.size) { !background[it] }
         // Seitenüberspannende Komponenten (schwarze Rahmengitter ohne Weißgutter) aufteilen
         val expanded = filtered.flatMap { box ->
@@ -35,10 +71,14 @@ class PanelDetector(
             if (wide || bandlike) BorderLineSplit.split(darkMask, page.width, page.height, box) else listOf(box)
         }
         val sized = expanded.filter { it.width.toLong() * it.height >= minArea }
-        val deSolid = dropSolidBlobs(sized, darkMask, page.width, page.height)
+        return postFilter(sized, darkMask, page)
+    }
+
+    /** Gemeinsame Nachfilter beider Pfade: solide Blobs, enthaltene Blasen, Überlappungen. */
+    private fun postFilter(boxes: List<PanelRect>, dark: BooleanArray, page: RenderedPage): List<PanelRect> {
+        val deSolid = dropSolidBlobs(boxes, dark, page.width, page.height)
         val deBubbled = dropContainedSmall(deSolid, page.width, page.height)
-        val merged = dropContained(deBubbled)
-        return ReadingOrder.sort(merged, direction)
+        return dropContained(deBubbled)
     }
 
     /**
