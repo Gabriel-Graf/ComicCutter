@@ -27,7 +27,7 @@ repositories {
     maven("https://jitpack.io")
 }
 dependencies {
-    implementation("com.github.Gabriel-Graf:ComicGiude:0.1.0")
+    implementation("com.github.Gabriel-Graf:ComicGuide:0.1.0")
 }
 ```
 

@@ -36,7 +36,7 @@ publishing {
                     "Reiner-Kotlin Comic-Panel-Detektor (Profil-XY-Cut + Flood-Fallback) " +
                         "mit Lesereihenfolge und geführter Navigation. Host-unabhängig, kein AWT."
                 )
-                url.set("https://github.com/Gabriel-Graf/ComicGiude")
+                url.set("https://github.com/Gabriel-Graf/ComicGuide")
                 licenses {
                     license {
                         name.set("GNU Affero General Public License v3.0")
@@ -50,9 +50,9 @@ publishing {
                     }
                 }
                 scm {
-                    url.set("https://github.com/Gabriel-Graf/ComicGiude")
-                    connection.set("scm:git:https://github.com/Gabriel-Graf/ComicGiude.git")
-                    developerConnection.set("scm:git:ssh://git@github.com/Gabriel-Graf/ComicGiude.git")
+                    url.set("https://github.com/Gabriel-Graf/ComicGuide")
+                    connection.set("scm:git:https://github.com/Gabriel-Graf/ComicGuide.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/Gabriel-Graf/ComicGuide.git")
                 }
             }
         }
