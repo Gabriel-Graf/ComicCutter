@@ -1,6 +1,7 @@
 import './style.css'
 import { detect, type Panel } from './detect'
 import { renderOverlay, clearOverlay } from './render'
+import { createDropdown, type DropdownHandle } from './dropdown'
 
 interface ComicEntry {
   file: string
@@ -18,7 +19,7 @@ app.innerHTML = `
     <p class="lead">Comic panel detection running entirely client-side — no server, no upload.</p>
 
     <div class="controls">
-      <select id="sample" aria-label="Example page"></select>
+      <div id="sample" aria-label="Example page"></div>
       <button id="upload-btn" type="button">Upload image</button>
       <input id="upload" type="file" accept="image/*" hidden>
       <label class="switch"><input id="toggle" type="checkbox" checked> Show panels</label>
@@ -39,7 +40,7 @@ app.innerHTML = `
        Everything is processed locally in your browser — nothing is ever uploaded.</p>
   </div>`
 
-const sampleSel = app.querySelector<HTMLSelectElement>('#sample')!
+const sampleHost = app.querySelector<HTMLDivElement>('#sample')!
 const uploadBtn = app.querySelector<HTMLButtonElement>('#upload-btn')!
 const uploadInput = app.querySelector<HTMLInputElement>('#upload')!
 const toggle = app.querySelector<HTMLInputElement>('#toggle')!
@@ -55,6 +56,7 @@ let comics: ComicEntry[] = []
 let currentIndex = -1
 let lastPanels: Panel[] = []
 let uploadUrl: string | null = null
+let dropdown: DropdownHandle | null = null
 
 /** Source + license of the current example, shown below the image. */
 function setAttribution(entry: ComicEntry | null) {
@@ -99,7 +101,7 @@ function showSample(index: number) {
   currentIndex = (index + comics.length) % comics.length
   revokeUpload()
   clearBtn.hidden = true
-  sampleSel.selectedIndex = currentIndex
+  dropdown?.setIndex(currentIndex)
   const entry = comics[currentIndex]
   setAttribution(entry)
   loadSrc(`${import.meta.env.BASE_URL}comics/${entry.file}`)
@@ -114,21 +116,18 @@ function showUpload(file: File) {
   loadSrc(uploadUrl)
 }
 
-fetch(`${import.meta.env.BASE_URL}comics.json`)
+// no-cache: comics.json hat eine stabile URL — sonst zeigt der Browser-Cache
+// nach einem Update veraltete Einträge (mit nicht mehr existierenden Dateien).
+fetch(`${import.meta.env.BASE_URL}comics.json`, { cache: 'no-cache' })
   .then((r) => r.json())
   .then((list: ComicEntry[]) => {
     comics = list
-    list.forEach((c) => {
-      const o = document.createElement('option')
-      o.value = c.file
-      o.textContent = `${c.title} (${c.year})`
-      sampleSel.appendChild(o)
-    })
+    const labels = list.map((c) => `${c.title} (${c.year})`)
+    dropdown = createDropdown(sampleHost, labels, (i) => showSample(i))
     if (list.length) showSample(0)
   })
   .catch(() => { count.textContent = 'examples not found — please upload an image' })
 
-sampleSel.addEventListener('change', () => showSample(sampleSel.selectedIndex))
 prevBtn.addEventListener('click', () => showSample(currentIndex - 1))
 nextBtn.addEventListener('click', () => showSample(currentIndex + 1))
 toggle.addEventListener('change', paintOverlay)

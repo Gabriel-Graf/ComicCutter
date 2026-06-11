@@ -13,11 +13,54 @@ h1 { font-size:20px; letter-spacing:.02em; margin:0 0 4px; }
   display:flex; gap:10px; align-items:center; justify-content:center;
   flex-wrap:wrap; margin:0 0 16px;
 }
-.controls select, .controls button {
+.controls button {
   background:var(--surface); color:var(--text); border:1px solid var(--border);
   border-radius:6px; padding:7px 12px; font-size:13px; cursor:pointer;
 }
-.controls button:hover, .controls select:hover { background:var(--surface-hover); }
+.controls button:hover { background:var(--surface-hover); }
+
+/* ── Custom example dropdown ─────────────────────────────────────────────── */
+.dd { position:relative; display:inline-block; text-align:left; }
+.dd-trigger {
+  display:flex; align-items:center; gap:10px; min-width:248px; max-width:340px;
+  background:var(--surface); color:var(--text);
+  border:1px solid var(--border); border-left:3px solid var(--accent);
+  border-radius:6px; padding:7px 12px; font-size:13px; cursor:pointer;
+  transition:border-color .12s, background .12s;
+}
+.dd-trigger:hover { background:var(--surface-hover); }
+.dd.open .dd-trigger { border-color:var(--accent); background:var(--surface-hover); }
+.dd-label { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dd-chevron { flex:0 0 auto; color:var(--muted); transition:transform .18s ease; }
+.dd.open .dd-chevron { transform:rotate(180deg); color:var(--accent); }
+
+.dd-menu {
+  position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:50;
+  margin:0; padding:4px; list-style:none; max-height:0; overflow:hidden;
+  background:var(--surface); border:1px solid var(--border); border-radius:8px;
+  box-shadow:0 14px 34px rgba(0,0,0,.55);
+  opacity:0; transform:scaleY(.96); transform-origin:top;
+  transition:opacity .14s ease, transform .14s ease, max-height .16s ease;
+  pointer-events:none;
+}
+.dd.open .dd-menu {
+  max-height:336px; overflow-y:auto; opacity:1; transform:scaleY(1); pointer-events:auto;
+}
+.dd-menu::-webkit-scrollbar { width:8px; }
+.dd-menu::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+.dd-option {
+  display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:5px;
+  cursor:pointer; color:var(--muted); transition:background .1s, color .1s;
+}
+.dd-option:hover { background:var(--surface-hover); color:var(--text); }
+.dd-option.current { color:var(--text); background:rgba(45,125,255,.12); }
+.dd-num {
+  flex:0 0 auto; font:700 11px ui-monospace,monospace; color:var(--muted);
+  background:var(--bg); border:1px solid var(--border); border-radius:3px; padding:1px 5px;
+}
+.dd-option.current .dd-num { color:#6ea8ff; border-color:rgba(45,125,255,.4); }
+.dd-text { flex:1; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .switch { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text); cursor:pointer; }
 .switch input { accent-color:var(--accent); cursor:pointer; }
 .count { color:var(--muted); font-size:13px; min-width:5em; text-align:left; }
