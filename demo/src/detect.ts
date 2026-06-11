@@ -14,14 +14,16 @@ const detectPanelsKt = (cc as {
   detectPanels: (w: number, h: number, argb: Int32Array, rtl: boolean) => Panel[]
 }).detectPanels
 
-/** Max. Kantenlänge vor Erkennung — drosselt die Laufzeit, Output bleibt normalisiert. */
+/** Longest edge before detection — caps runtime; output stays normalized. */
 const MAX_EDGE = 1500
 
 /**
- * Zeichnet das Bild (ggf. runterskaliert) auf ein Offscreen-Canvas, liest RGBA,
- * konvertiert nach ARGB-Int32Array und ruft den Kotlin-Detektor.
+ * Draws the image (downscaled if large) to an offscreen canvas, reads RGBA,
+ * converts to an ARGB Int32Array and runs the Kotlin detector.
+ * Reading order is fixed left-to-right — direction only affects numbering,
+ * not the detected boxes.
  */
-export function detect(image: CanvasImageSource, srcW: number, srcH: number, rtl: boolean): Panel[] {
+export function detect(image: CanvasImageSource, srcW: number, srcH: number): Panel[] {
   const scale = Math.min(1, MAX_EDGE / Math.max(srcW, srcH))
   const w = Math.max(1, Math.round(srcW * scale))
   const h = Math.max(1, Math.round(srcH * scale))
@@ -38,5 +40,5 @@ export function detect(image: CanvasImageSource, srcW: number, srcH: number, rtl
     argb[i] = (rgba[p + 3] << 24) | (rgba[p] << 16) | (rgba[p + 1] << 8) | rgba[p + 2]
   }
 
-  return detectPanelsKt(w, h, argb, rtl)
+  return detectPanelsKt(w, h, argb, false)
 }
