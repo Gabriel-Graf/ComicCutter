@@ -26,6 +26,9 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
+        // @JsExport ist in Kotlin 2.1 noch experimentell — Opt-in nur für die JS-Quellsets.
+        jsMain { languageSettings.optIn("kotlin.js.ExperimentalJsExport") }
+        jsTest { languageSettings.optIn("kotlin.js.ExperimentalJsExport") }
     }
 }
 
