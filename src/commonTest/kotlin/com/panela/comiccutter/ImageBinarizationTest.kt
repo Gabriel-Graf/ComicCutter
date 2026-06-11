@@ -1,7 +1,7 @@
 package com.panela.comiccutter
 
 import com.panela.comiccutter.model.RenderedPage
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
