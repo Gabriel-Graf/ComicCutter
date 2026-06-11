@@ -4,7 +4,15 @@ Reiner-Kotlin Detektor für Comic-/Manga-**Panels**: erkennt die Kacheln einer
 gerenderten Seite, sortiert sie in Lesereihenfolge und liefert eine geführte
 Panel-zu-Panel-Navigation. **Host-unabhängig** — kein AWT, kein `ImageIO`,
 keine Fremd-Abhängigkeit außer der Kotlin-Stdlib. Läuft damit auch headless
-(z. B. in einem Server wie Komga).
+(z. B. in einem Server wie Komga) — und dank Kotlin/JS sogar direkt im Browser.
+
+## Live-Demo
+
+Panel-Erkennung direkt im Browser, ohne Backend:
+**https://gabriel-graf.github.io/ComicGuide/**
+
+Gemeinfreie Beispielseiten (Quelle/Lizenz sichtbar verlinkt) oder eigenes Bild
+hochladen — die Erkennung läuft komplett lokal, nichts wird hochgeladen.
 
 ## Ansatz
 
@@ -17,7 +25,9 @@ Kacheln anhand von Content-Kontinuität.
 
 ## Einbinden
 
-> Erfordert JVM 21+.
+> Erfordert JVM 21+. Ab **0.2.0** ist die Lib Kotlin-Multiplatform (jvm + js).
+> Gradle-Konsumenten (z. B. Komga) nutzen die Koordinate unten unverändert —
+> Gradle löst via Modul-Metadata automatisch auf das `-jvm`-Artefakt auf.
 
 ### Variante A — JitPack (Tag genügt, keine Server-Infrastruktur)
 
@@ -27,7 +37,7 @@ repositories {
     maven("https://jitpack.io")
 }
 dependencies {
-    implementation("com.github.Gabriel-Graf:ComicGuide:0.1.0")
+    implementation("com.github.Gabriel-Graf:ComicGuide:0.2.0")
 }
 ```
 
@@ -35,7 +45,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("io.github.gabriel-graf:comic-cutter:0.1.0")
+    implementation("io.github.gabriel-graf:comic-cutter:0.2.0")
 }
 ```
 
@@ -50,7 +60,7 @@ import com.panela.comiccutter.model.RenderedPage
 //   val px = IntArray(w * h); img.getRGB(0, 0, w, h, px, 0, w)
 val page = RenderedPage(width, height, px)
 
-val panels = PanelDetector().detect(page, ReadingDirection.RTL)
+val panels = PanelDetector().detect(page, ReadingDirection.RIGHT_TO_LEFT)
 // → List<PanelRect> in Lesereihenfolge
 ```
 
@@ -62,16 +72,20 @@ Für die geführte Navigation siehe `GuidedNavigator` / `GuidedPosition`.
 |-----|-------|
 | `PanelDetector` | Panel-Erkennung: `detect(page, direction): List<PanelRect>` |
 | `RenderedPage` | Host-unabhängige Seite: `(width, height, IntArray /*ARGB*/)` |
-| `ReadingDirection` | `LTR` / `RTL` |
+| `ReadingDirection` | `LEFT_TO_RIGHT` / `RIGHT_TO_LEFT` |
 | `PanelRect` / `NormRect` | Panel-Bounding-Box (Pixel bzw. normalisiert) |
 | `GuidedNavigator` | Panel-zu-Panel-Navigation über Seiten |
 
 ## Bauen
 
 ```bash
-./gradlew build              # kompilieren + Tests
+./gradlew build               # kompilieren + Tests (jvm + js)
 ./gradlew publishToMavenLocal # nach ~/.m2 (lokales Einbinden)
+./gradlew jsBrowserDistribution # JS-Bundle für die Demo
 ```
+
+Demo lokal: Bundle nach `demo/src/kotlin/` kopieren, dann `cd demo && npm install && npm run dev`.
+Deploy nach GitHub Pages läuft automatisch über `.github/workflows/pages.yml`.
 
 ## Lizenz
 
