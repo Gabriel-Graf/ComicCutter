@@ -2,7 +2,13 @@ import './style.css'
 import { detect, type Panel } from './detect'
 import { renderOverlay } from './render'
 
-interface ComicEntry { file: string; title: string; year: number }
+interface ComicEntry {
+  file: string
+  title: string
+  year: number
+  source: string
+  license: string
+}
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = `
@@ -14,8 +20,9 @@ app.innerHTML = `
       <label><input id="rtl" type="checkbox"> Rechts→Links (Manga)</label>
       <span id="count" class="hint"></span>
     </div>
+    <div id="attribution" class="attribution"></div>
     <div id="stage" class="stage"><img id="page" alt="Comicseite"></div>
-    <p class="hint">Bild ziehen &amp; ablegen oder „Upload" — die Erkennung läuft komplett lokal im Browser.</p>
+    <p class="hint">Bild ziehen &amp; ablegen oder „Upload" — die Erkennung läuft komplett lokal im Browser, nichts wird hochgeladen.</p>
   </div>`
 
 const sampleSel = app.querySelector<HTMLSelectElement>('#sample')!
@@ -24,6 +31,20 @@ const rtlBox = app.querySelector<HTMLInputElement>('#rtl')!
 const stage = app.querySelector<HTMLDivElement>('#stage')!
 const pageImg = app.querySelector<HTMLImageElement>('#page')!
 const count = app.querySelector<HTMLSpanElement>('#count')!
+const attribution = app.querySelector<HTMLDivElement>('#attribution')!
+
+let comics: ComicEntry[] = []
+
+/** Zeigt Quelle + Lizenz des aktuellen Beispiels gut sichtbar an (oder Upload-Hinweis). */
+function setAttribution(entry: ComicEntry | null) {
+  if (entry) {
+    const link = `<a href="${entry.source}" target="_blank" rel="noopener noreferrer">${entry.title}</a>`
+    attribution.innerHTML =
+      `Quelle: ${link} · Lizenz: <strong>${entry.license}</strong> (Wikimedia Commons)`
+  } else {
+    attribution.textContent = 'Eigenes Bild — lokal verarbeitet, nicht hochgeladen.'
+  }
+}
 
 function runDetection() {
   if (!pageImg.naturalWidth) return
@@ -43,9 +64,21 @@ function loadSrc(src: string) {
   pageImg.src = src
 }
 
+function loadSample(file: string) {
+  setAttribution(comics.find((c) => c.file === file) ?? null)
+  loadSrc(`${import.meta.env.BASE_URL}comics/${file}`)
+}
+
+function loadUpload(f: File) {
+  if (!f.type.startsWith('image/')) { count.textContent = 'Bitte eine Bilddatei wählen'; return }
+  setAttribution(null)
+  loadSrc(URL.createObjectURL(f))
+}
+
 fetch(`${import.meta.env.BASE_URL}comics.json`)
   .then((r) => r.json())
   .then((list: ComicEntry[]) => {
+    comics = list
     list.forEach((c, i) => {
       const o = document.createElement('option')
       o.value = c.file
@@ -53,20 +86,16 @@ fetch(`${import.meta.env.BASE_URL}comics.json`)
       if (i === 0) o.selected = true
       sampleSel.appendChild(o)
     })
-    if (list.length) loadSrc(`${import.meta.env.BASE_URL}comics/${list[0].file}`)
+    if (list.length) loadSample(list[0].file)
   })
   .catch(() => { count.textContent = 'Beispiele nicht gefunden — bitte Bild hochladen' })
 
-sampleSel.addEventListener('change', () =>
-  loadSrc(`${import.meta.env.BASE_URL}comics/${sampleSel.value}`),
-)
+sampleSel.addEventListener('change', () => loadSample(sampleSel.value))
 rtlBox.addEventListener('change', runDetection)
 
 uploadInput.addEventListener('change', () => {
   const f = uploadInput.files?.[0]
-  if (!f) return
-  if (!f.type.startsWith('image/')) { count.textContent = 'Bitte eine Bilddatei wählen'; return }
-  loadSrc(URL.createObjectURL(f))
+  if (f) loadUpload(f)
 })
 app.querySelector('label')!.addEventListener('click', () => uploadInput.click())
 
@@ -79,5 +108,5 @@ app.querySelector('label')!.addEventListener('click', () => uploadInput.click())
 stage.addEventListener('drop', (e) => {
   e.preventDefault()
   const f = (e as DragEvent).dataTransfer?.files?.[0]
-  if (f && f.type.startsWith('image/')) loadSrc(URL.createObjectURL(f))
+  if (f) loadUpload(f)
 })
