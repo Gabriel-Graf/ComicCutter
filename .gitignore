@@ -9,3 +9,8 @@ build/
 
 # OS
 .DS_Store
+
+# Demo
+demo/node_modules/
+demo/dist/
+demo/src/kotlin/
