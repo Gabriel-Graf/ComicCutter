@@ -20,6 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Aktiviert GitHub Pages beim ersten Lauf via GITHUB_TOKEN (pages: write),
+      # ohne manuelle Repo-Einstellung.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
