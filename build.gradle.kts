@@ -44,6 +44,7 @@ kotlin {
         commonMain { kotlin.srcDir(generateVersionFile) }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
         }
         // @JsExport ist in Kotlin 2.1 noch experimentell — Opt-in nur für die JS-Quellsets.
         jsMain { languageSettings.optIn("kotlin.js.ExperimentalJsExport") }
