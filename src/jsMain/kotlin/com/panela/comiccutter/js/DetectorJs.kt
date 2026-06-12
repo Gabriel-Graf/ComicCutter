@@ -2,7 +2,12 @@ package com.panela.comiccutter.js
 
 import com.panela.comiccutter.PanelDetector
 import com.panela.comiccutter.ReadingDirection
+import com.panela.comiccutter.VERSION
 import com.panela.comiccutter.model.RenderedPage
+
+/** Die gebaute Lib-Version (= Release-Tag) — für die Demo-Anzeige. */
+@JsExport
+fun libVersion(): String = VERSION
 
 /** Ein erkanntes Panel in normalisierten Seiten-Koordinaten (0..1), 1-basierte Lesereihenfolge. */
 @JsExport

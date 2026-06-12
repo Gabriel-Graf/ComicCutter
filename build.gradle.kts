@@ -6,9 +6,27 @@ plugins {
 // io.github.<github-user> ist der von Sonatype auto-verifizierte Namespace.
 // Bei JitPack wird die group durch com.github.<user> ersetzt — dort egal.
 group = "io.github.gabriel-graf"
-version = "0.2.2"
+version = "0.2.3"
 
 repositories { mavenCentral() }
+
+// Generiert eine Version.kt aus der Gradle-`version` (Single Source of Truth) — nach JS exportiert,
+// damit die Demo den tatsächlich gebauten Release-Tag anzeigen kann.
+val generateVersionFile by tasks.registering {
+    val outputDir = layout.buildDirectory.dir("generated/version/kotlin")
+    val versionValue = project.version.toString()
+    inputs.property("version", versionValue)
+    outputs.dir(outputDir)
+    doLast {
+        val pkg = outputDir.get().dir("com/panela/comiccutter").asFile
+        pkg.mkdirs()
+        pkg.resolve("Version.kt").writeText(
+            "package com.panela.comiccutter\n\n" +
+                "/** Lib-Version (= Git-Release-Tag), generiert aus der Gradle-`version`. */\n" +
+                "public const val VERSION: String = \"$versionValue\"\n",
+        )
+    }
+}
 
 kotlin {
     jvmToolchain(21)
@@ -23,6 +41,7 @@ kotlin {
     }
 
     sourceSets {
+        commonMain { kotlin.srcDir(generateVersionFile) }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
