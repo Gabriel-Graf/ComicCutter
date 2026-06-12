@@ -15,7 +15,7 @@ gleich.
 
 ## 1. Dependency hinzufügen
 
-**Jetzt (lokal, sofort baubar):** Die Lib ist als `0.3.0` in MavenLocal publiziert.
+**Jetzt (lokal, sofort baubar):** Die Lib ist als `0.3.1` in MavenLocal publiziert.
 
 ```kotlin
 // settings.gradle.kts / build.gradle.kts der App
@@ -24,16 +24,16 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    implementation("io.github.gabriel-graf:comic-cutter:0.3.0")
+    implementation("io.github.gabriel-graf:comic-cutter:0.3.1")
     // Gradle löst via KMP-Metadata automatisch auf das -jvm-Artefakt auf.
 }
 ```
 
-**Später (echtes Release, CI):** Sobald ein Tag `0.3.0` nach GitHub gepusht ist:
+**Später (echtes Release, CI):** Sobald ein Tag `0.3.1` nach GitHub gepusht ist:
 
 ```kotlin
 repositories { maven("https://jitpack.io") }
-dependencies { implementation("com.github.Gabriel-Graf:ComicCutter:0.3.0") }
+dependencies { implementation("com.github.Gabriel-Graf:ComicCutter:0.3.1") }
 ```
 
 > Optionales ML-Modul `comic-cutter-onnx-jvm` (ONNX-Runner) wird **noch nicht**
@@ -147,9 +147,20 @@ Netz lebt jetzt in der Lib).
 
 ## 8. ML später (nicht jetzt)
 
-Wenn ein YOLO-Panel-Modell rein soll, ohne die App zu ändern: nur die `source`
-in `PanelGuide` tauschen —
+Wenn ein YOLO-Panel-Modell rein soll, ohne die App-Aufrufe zu ändern: nur die
+`source` in `PanelGuide` tauschen —
 `PanelGuide(MlPanelSource(runner, MlFilter(minScore = 0.25f, nmsIoU = 0.7f)))`.
-Den Runner liefert das optionale Modul `comic-cutter-onnx-jvm`
-(`OnnxModelRunner(modelBytes)`); das Modell selbst reicht der Reader zur Laufzeit
-rein. Die `guide()`-Aufrufe in der App bleiben identisch.
+Den Runner liefert das optionale, separat publizierte Modul:
+
+```kotlin
+implementation("io.github.gabriel-graf:comic-cutter-onnx-jvm:0.3.1")  // zieht onnxruntime + Core mit
+```
+
+```kotlin
+val runner = OnnxModelRunner(modelBytes)   // modelBytes reicht der Reader zur Laufzeit rein
+```
+
+Das Modell (YOLO11 `(1,5,8400)`, INT8-ONNX) ist NICHT Teil der Lib. Die
+`guide()`-Aufrufe in der App bleiben identisch. Erwartetes Output-Format und
+Letterbox-Details: `comic-cutter-onnx-jvm/README.md`. (Paritäts-getestet gegen
+die Python-Referenz, IoU ≥ 0.95.)
