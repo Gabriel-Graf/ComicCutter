@@ -1,5 +1,5 @@
 import './style.css'
-import { detect, type Panel } from './detect'
+import { detect, LIB_VERSION, type Panel } from './detect'
 import { renderOverlay, clearOverlay } from './render'
 import { createDropdown, type DropdownHandle } from './dropdown'
 
@@ -15,15 +15,30 @@ interface ComicEntry {
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = `
   <div class="wrap">
-    <h1>ComicGuide — Panel Detection in the Browser</h1>
-    <p class="lead">Comic panel detection running entirely client-side — no server, no upload.</p>
+    <header class="head">
+      <h1>ComicGuide <span class="ver" id="ver"></span></h1>
+      <p class="lead">Comic panel detection running entirely client-side — no server, no upload.</p>
+    </header>
 
-    <div class="controls">
-      <div id="sample" aria-label="Example page"></div>
-      <button id="upload-btn" type="button">Upload image</button>
+    <div class="toolbar" role="toolbar" aria-label="Controls">
+      <div class="tb-cell" id="sample" aria-label="Example page"></div>
+      <span class="tb-sep"></span>
+      <button id="upload-btn" class="tb-btn" type="button">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M8 10.5V2.5M8 2.5 4.8 5.7M8 2.5l3.2 3.2M2.8 10v2.2a1 1 0 0 0 1 1h8.4a1 1 0 0 0 1-1V10"
+            fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Upload
+      </button>
       <input id="upload" type="file" accept="image/*" hidden>
-      <label class="switch"><input id="toggle" type="checkbox" checked> Show panels</label>
-      <span id="count" class="count"></span>
+      <span class="tb-sep"></span>
+      <label class="tb-switch" title="Toggle panel overlay">
+        <input id="toggle" type="checkbox" checked>
+        <span class="tb-track"><span class="tb-knob"></span></span>
+        <span class="tb-switch-label">Panels</span>
+      </label>
+      <span class="tb-sep"></span>
+      <span id="count" class="tb-count" aria-live="polite"></span>
     </div>
 
     <div class="viewer">
@@ -36,7 +51,7 @@ app.innerHTML = `
     </div>
 
     <div id="attribution" class="attribution"></div>
-    <p class="hint">Drag &amp; drop your own comic page onto the image, or click “Upload image”.
+    <p class="hint">Drag &amp; drop your own comic page onto the image, or click “Upload”.
        Everything is processed locally in your browser — nothing is ever uploaded.</p>
   </div>`
 
@@ -51,6 +66,17 @@ const attribution = app.querySelector<HTMLDivElement>('#attribution')!
 const prevBtn = app.querySelector<HTMLButtonElement>('#prev')!
 const nextBtn = app.querySelector<HTMLButtonElement>('#next')!
 const clearBtn = app.querySelector<HTMLButtonElement>('#clear')!
+const verBadge = app.querySelector<HTMLSpanElement>('#ver')!
+
+// Tatsächlich gebaute Lib-Version (= Release-Tag) anzeigen, damit klar ist, was deployt wurde.
+verBadge.textContent = `v${LIB_VERSION}`
+
+/** Setzt Panel-Zähler + Status-Punkt (loading | result | idle). */
+function setCount(text: string, mode: 'loading' | 'result' | 'idle') {
+  count.textContent = text
+  count.classList.toggle('loading', mode === 'loading')
+  count.classList.toggle('active', mode === 'result' && lastPanels.length > 0)
+}
 
 let comics: ComicEntry[] = []
 let currentIndex = -1
@@ -79,9 +105,9 @@ function runDetection() {
   try {
     lastPanels = detect(pageImg, pageImg.naturalWidth, pageImg.naturalHeight)
     paintOverlay()
-    count.textContent = lastPanels.length === 0 ? 'no panels found' : `${lastPanels.length} panels`
+    setCount(lastPanels.length === 0 ? 'no panels' : `${lastPanels.length} panels`, 'result')
   } catch (e) {
-    count.textContent = 'detection error'
+    setCount('error', 'idle')
     console.error(e)
   }
 }
@@ -91,14 +117,14 @@ function loadSrc(src: string) {
   // bis die synchrone Erkennung des NÄCHSTEN Bildes fertig ist — das wirkt stark verzögert.
   lastPanels = []
   clearOverlay(stage)
-  count.textContent = '…'
+  setCount('loading', 'loading')
   pageImg.onload = () => {
-    count.textContent = 'detecting…'
+    setCount('detecting', 'loading')
     // Erst das neue Bild rendern lassen, DANN die (mehrere 100 ms blockierende) Erkennung —
     // sonst erscheint das neue Bild erst nach der Rechenzeit. Doppeltes rAF = ein Paint dazwischen.
     requestAnimationFrame(() => requestAnimationFrame(runDetection))
   }
-  pageImg.onerror = () => { count.textContent = 'image could not be loaded' }
+  pageImg.onerror = () => { setCount('load error', 'idle') }
   pageImg.src = src
 }
 
@@ -118,7 +144,7 @@ function showSample(index: number) {
 }
 
 function showUpload(file: File) {
-  if (!file.type.startsWith('image/')) { count.textContent = 'please choose an image file'; return }
+  if (!file.type.startsWith('image/')) { setCount('not an image', 'idle'); return }
   revokeUpload()
   uploadUrl = URL.createObjectURL(file)
   clearBtn.hidden = false
@@ -136,7 +162,7 @@ fetch(`${import.meta.env.BASE_URL}comics.json`, { cache: 'no-cache' })
     dropdown = createDropdown(sampleHost, labels, (i) => showSample(i))
     if (list.length) showSample(0)
   })
-  .catch(() => { count.textContent = 'examples not found — please upload an image' })
+  .catch(() => { setCount('no examples', 'idle') })
 
 prevBtn.addEventListener('click', () => showSample(currentIndex - 1))
 nextBtn.addEventListener('click', () => showSample(currentIndex + 1))

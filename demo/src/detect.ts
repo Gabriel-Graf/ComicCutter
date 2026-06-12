@@ -10,12 +10,21 @@ export interface Panel {
   order: number
 }
 
-const detectPanelsKt = (cc as {
+const ccApi = cc as {
   detectPanels: (w: number, h: number, argb: Int32Array, rtl: boolean) => Panel[]
-}).detectPanels
+  libVersion: () => string
+}
+const detectPanelsKt = ccApi.detectPanels
 
-/** Longest edge before detection — caps runtime; output stays normalized. */
-const MAX_EDGE = 1500
+/** Built library version (= release tag), shown in the demo. */
+export const LIB_VERSION = ccApi.libVersion()
+
+/**
+ * Canvas memory guard for very large uploads only. The library itself downscales to its tuned
+ * detection width (≤ 1000 px) before detecting, so normal comic pages pass through untouched here
+ * (no double resample). Output stays normalized regardless.
+ */
+const MAX_EDGE = 2400
 
 /**
  * Draws the image (downscaled if large) to an offscreen canvas, reads RGBA,
