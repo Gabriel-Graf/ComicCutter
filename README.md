@@ -9,7 +9,7 @@ keine Fremd-Abhängigkeit außer der Kotlin-Stdlib. Läuft damit auch headless
 ## Live-Demo
 
 Panel-Erkennung direkt im Browser, ohne Backend:
-**https://gabriel-graf.github.io/ComicGuide/**
+**https://gabriel-graf.github.io/ComicCutter/**
 
 Gemeinfreie Beispielseiten (Quelle/Lizenz sichtbar verlinkt) oder eigenes Bild
 hochladen — die Erkennung läuft komplett lokal, nichts wird hochgeladen.
@@ -37,7 +37,7 @@ repositories {
     maven("https://jitpack.io")
 }
 dependencies {
-    implementation("com.github.Gabriel-Graf:ComicGuide:0.2.2")
+    implementation("com.github.Gabriel-Graf:ComicCutter:0.2.2")
 }
 ```
 
