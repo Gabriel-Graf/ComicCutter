@@ -14,3 +14,7 @@ build/
 demo/node_modules/
 demo/dist/
 demo/src/kotlin/
+
+# ML-Modelle sind NICHT Teil der Lib (Konsument reicht sie zur Laufzeit rein)
+*.onnx
+*.pt
