@@ -51,6 +51,17 @@ object GutterProfileCut {
      *                        (kleine Box); ein strikter Std dort verhindert sie, ohne die großflächige
      *                        Gassen-Trennung zu schwächen. Gemessen: hebt Precision UND Recall zugleich.
      * @param bigAreaFraction Flächen-Schwelle, ab der eine Box als „groß" (permissiver Std) gilt.
+     * @param noiseK          Page-adaptiver Std-Zuschlag: der std-Schwellwert wird um `noiseK ×
+     *                        Rausch-Floor` der Seite angehoben. Golden-Age-Newsprint-Scans haben hohes
+     *                        Korn (Floor ~2-4) — ihre dunklen Gassen sind verrauscht und überschreiten
+     *                        den festen Std-20-Schwellwert, würden also verfehlt. Saubere moderne Seiten
+     *                        haben Floor ~0, behalten den Basis-Std → kein Over-Split. Domänen-Erkennung
+     *                        rein aus dem Bild, ohne externes Flag.
+     * @param gutterDarkLo    Mid-Tone-Ausschluss (untere Grenze): der Std-Term feuert nur, wenn die Zeile/
+     *                        Spalte im Mittel ≤ dieser Luminanz (dunkle Tinten-Gasse) liegt …
+     * @param gutterBrightHi  … ODER ≥ dieser Luminanz (helle Papier-Gasse). Uniforme MID-Tone-Streifen
+     *                        (Himmel, Wand in moderner Art) werden so NICHT als Gasse zerschnitten — das
+     *                        erlaubt den höheren page-adaptiven Std, ohne moderne Flächen over-zu-splitten.
      * @param trimContent     Content-Mindestanteil beim Trimmen; Zeilen/Spalten darunter gelten als Rand.
      * @param minAreaFraction Kacheln kleiner als dieser Seitenflächenanteil entfallen.
      */
@@ -64,6 +75,9 @@ object GutterProfileCut {
         maxGutterStd: Double = 20.0,
         maxGutterStdSmall: Double = 8.0,
         bigAreaFraction: Double = 0.25,
+        noiseK: Double = 4.0,
+        gutterDarkLo: Int = 95,
+        gutterBrightHi: Int = 160,
         trimContent: Double = 0.02,
         minAreaFraction: Double = 0.012,
     ): List<PanelRect> {
@@ -81,7 +95,18 @@ object GutterProfileCut {
         val darkCut = minOf(otsu, 60)
         val content = BooleanArray(lum.size) { lum[it] < brightCut && lum[it] > darkCut }
         val bigArea = (w.toLong() * h * bigAreaFraction).toLong()
-        val params = CutParams(minPanel, maxGutterDensity, minBrightFraction, maxGutterStd, maxGutterStdSmall, bigArea)
+        // Page-adaptiver Std-Zuschlag aus dem Korn-/Rausch-Floor (s. noiseK-Doku).
+        val noiseFloor = localNoiseFloor(lum, w, h)
+        // Zuschlag NUR auf den GROSSEN-Box-Std (das Under-Split-/Top-Level-Trennen). Der kleine Std
+        // bleibt strikt: Over-Splits an internen dunklen Strukturen entstehen beim Rekursieren IN ein
+        // Panel (kleine Box) — den dort anzuheben würde Newsprint-Panels zersplittern (gemessen:
+        // Precision-Crash). Asymmetrie wie beim festen Std (s. maxGutterStdSmall-Doku).
+        val noiseBoost = noiseK * noiseFloor
+        val params = CutParams(
+            minPanel, maxGutterDensity, minBrightFraction,
+            maxGutterStd + noiseBoost, maxGutterStdSmall, bigArea,
+            gutterDarkLo.toDouble(), gutterBrightHi.toDouble(),
+        )
         val tiles = mutableListOf<PanelRect>()
         cut(edge, bright, lum, w, PanelRect(0, 0, w, h), params, depth = 0, out = tiles)
 
@@ -104,10 +129,59 @@ object GutterProfileCut {
     private data class CutParams(
         val minPanel: Int, val maxDensity: Double, val minBright: Double,
         val maxStd: Double, val maxStdSmall: Double, val bigArea: Long,
+        val darkLo: Double, val brightHi: Double,
     ) {
         /** Box-größenabhängiger Std-Schwellwert (permissiv für große, strikt für kleine Boxen). */
         fun stdFor(box: PanelRect): Double =
             if (box.width.toLong() * box.height >= bigArea) maxStd else maxStdSmall
+    }
+
+    // ── Rausch-Floor ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Korn-/Rausch-Floor der Seite = 5. Perzentil der lokalen Luminanz-Std in [win]×[win]-Fenstern.
+     * Die flachsten Patches (uniformes Papier/Gasse/Himmel) tragen nur das Sensor-/Druck-Korn — bei
+     * Newsprint-Scans (Golden Age) ~2-4, bei sauberen digitalen Seiten ~0. Integral-Bilder halten das
+     * bei O(Pixel). Border (halbes Fenster) wird übersprungen; für das Perzentil irrelevant.
+     */
+    private fun localNoiseFloor(lum: IntArray, w: Int, h: Int, win: Int = 5): Double {
+        val r = win / 2
+        if (w <= win || h <= win) return 0.0
+        val sw = w + 1
+        val sum = LongArray(sw * (h + 1))
+        val sumSq = LongArray(sw * (h + 1))
+        for (y in 0 until h) {
+            var rowSum = 0L
+            var rowSqr = 0L
+            val above = y * sw
+            val cur = (y + 1) * sw
+            for (x in 0 until w) {
+                val v = lum[y * w + x].toLong()
+                rowSum += v; rowSqr += v * v
+                sum[cur + x + 1] = sum[above + x + 1] + rowSum
+                sumSq[cur + x + 1] = sumSq[above + x + 1] + rowSqr
+            }
+        }
+        val area = (win * win).toDouble()
+        val hist = IntArray(256)
+        var count = 0
+        for (y in r until h - r) for (x in r until w - r) {
+            val y0 = y - r; val y1 = y + r + 1; val x0 = x - r; val x1 = x + r + 1
+            val s = sum[y1 * sw + x1] - sum[y0 * sw + x1] - sum[y1 * sw + x0] + sum[y0 * sw + x0]
+            val sq = sumSq[y1 * sw + x1] - sumSq[y0 * sw + x1] - sumSq[y1 * sw + x0] + sumSq[y0 * sw + x0]
+            val mean = s / area
+            val variance = (sq / area - mean * mean).coerceAtLeast(0.0)
+            val std = kotlin.math.sqrt(variance).toInt().coerceIn(0, 255)
+            hist[std]++; count++
+        }
+        if (count == 0) return 0.0
+        val target = (count * 0.05).toLong()
+        var cum = 0L
+        for (v in hist.indices) {
+            cum += hist[v]
+            if (cum >= target) return v.toDouble()
+        }
+        return 0.0
     }
 
     // ── Kantenbild ────────────────────────────────────────────────────────────────────────────
@@ -148,10 +222,12 @@ object GutterProfileCut {
 
         val maxStd = p.stdFor(box)
         val rowCut = widestInteriorValley(
-            rowDensity(edge, imgW, box), rowFraction(bright, imgW, box), rowStd(lum, imgW, box), p, maxStd,
+            rowDensity(edge, imgW, box), rowFraction(bright, imgW, box),
+            rowStd(lum, imgW, box), rowMean(lum, imgW, box), p, maxStd,
         )
         val colCut = widestInteriorValley(
-            colDensity(edge, imgW, box), colFraction(bright, imgW, box), colStd(lum, imgW, box), p, maxStd,
+            colDensity(edge, imgW, box), colFraction(bright, imgW, box),
+            colStd(lum, imgW, box), colMean(lum, imgW, box), p, maxStd,
         )
 
         // Breiteres Tal = sauberere Trennung.
@@ -190,11 +266,14 @@ object GutterProfileCut {
      * ergibt — und engste echte Gassen sollen erhalten bleiben.
      */
     private fun widestInteriorValley(
-        density: DoubleArray, bright: DoubleArray, std: DoubleArray, p: CutParams, maxStd: Double,
+        density: DoubleArray, bright: DoubleArray, std: DoubleArray, mean: DoubleArray, p: CutParams, maxStd: Double,
     ): Cut? {
         val n = density.size
         if (n < 2 * p.minPanel + 1) return null
-        fun isGutter(i: Int) = (bright[i] >= p.minBright && density[i] <= p.maxDensity) || std[i] <= maxStd
+        // Std-Term nur für farblich EXTREME (dunkle Tinten- ODER helle Papier-) Streifen — Mid-Tone
+        // ausgeschlossen, damit uniforme Art-Flächen nicht zerschnitten werden (s. detect-Doku).
+        fun isGutter(i: Int) = (bright[i] >= p.minBright && density[i] <= p.maxDensity) ||
+            (std[i] <= maxStd && (mean[i] <= p.darkLo || mean[i] >= p.brightHi))
         var best: Cut? = null
         var i = 0
         while (i < n) {
@@ -306,6 +385,32 @@ object GutterProfileCut {
             var y = box.y
             while (y < y1) { val v = lum[y * imgW + x].toDouble(); sum += v; sumSq += v * v; y++ }
             stdOf(sum, sumSq, rows)
+        }
+    }
+
+    /** Pro Zeile der Box: mittlere Luminanz über die Spalten (für den Mid-Tone-Ausschluss). */
+    private fun rowMean(lum: IntArray, imgW: Int, box: PanelRect): DoubleArray {
+        val x1 = box.x + box.width
+        val cols = box.width.coerceAtLeast(1)
+        return DoubleArray(box.height) { r ->
+            val y = box.y + r
+            var sum = 0L
+            var x = box.x
+            while (x < x1) { sum += lum[y * imgW + x]; x++ }
+            sum.toDouble() / cols
+        }
+    }
+
+    /** Pro Spalte der Box: mittlere Luminanz über die Zeilen. */
+    private fun colMean(lum: IntArray, imgW: Int, box: PanelRect): DoubleArray {
+        val y1 = box.y + box.height
+        val rows = box.height.coerceAtLeast(1)
+        return DoubleArray(box.width) { c ->
+            val x = box.x + c
+            var sum = 0L
+            var y = box.y
+            while (y < y1) { sum += lum[y * imgW + x]; y++ }
+            sum.toDouble() / rows
         }
     }
 

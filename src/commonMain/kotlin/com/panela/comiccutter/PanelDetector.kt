@@ -14,6 +14,9 @@ import com.panela.comiccutter.model.RenderedPage
 class PanelDetector(
     private val minPanelAreaFraction: Double = 0.01,
     private val containmentFraction: Double = 0.8,
+    private val gpcFloodArbitration: Boolean = true,
+    private val floodArbMaxGpc: Int = 2,
+    private val floodArbDelta: Int = 3,
 ) {
     private companion object {
         /** Obergrenze für Flood-Rescue-Boxen; darüber zersplittert das Flood vermutlich einen Splash. */
@@ -34,7 +37,17 @@ class PanelDetector(
     private fun detectSinglePage(page: RenderedPage): List<PanelRect> {
         if (page.width <= 0 || page.height <= 0 || page.pixels.isEmpty()) return emptyList()
         val profile = gutterProfileDetect(page)
-        if (profile.size >= 2) return profile
+        if (profile.size >= 2) {
+            // Bordered dense grid: GPCs Voll-Breiten-Projektion unter-segmentiert, weil querende
+            // Panel-Rahmen jede Gutter-Zeile bimodal machen. Das Weißgutter-Flood folgt dagegen dem
+            // zusammenhängenden Netz und findet das Raster. Nur wenn GPC WENIG Panels lieferte und
+            // Flood DEUTLICH mehr (Schwelle), wird Flood bevorzugt — sonst bleibt GPC (Default-robust).
+            if (gpcFloodArbitration && profile.size <= floodArbMaxGpc) {
+                val flood = floodDetect(page)
+                if (flood.size >= profile.size + floodArbDelta) return flood
+            }
+            return profile
+        }
         // Profil fand keine Gasse (full-bleed-Splash ODER weiße Gassen, die der Projektion entgehen,
         // weil Blasen/Text die Zeilen-/Spalten-Statistik stören). Das Weißgutter-Flood ist hier
         // komplementär: bei einem echten Splash findet es ebenfalls nichts (1 Box), bei einem
