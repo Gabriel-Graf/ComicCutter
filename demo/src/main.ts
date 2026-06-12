@@ -16,7 +16,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = `
   <div class="wrap">
     <header class="head">
-      <h1>ComicGuide <span class="ver" id="ver"></span></h1>
+      <h1>ComicCutter <span class="ver" id="ver"></span></h1>
       <p class="lead">Comic panel detection running entirely client-side — no server, no upload.</p>
     </header>
 
