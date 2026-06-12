@@ -12,11 +12,13 @@ Index-Navigation über Seiten anbietet (`GuidedNavigator`). Die eigentliche
 Guided-View-Logik (welche Kachel als Nächstes, Crop/Zoom, Position halten)
 liegt aber noch in der konsumierenden App (komga-reader).
 
-**Ziel:** Die Lib wird *die* entkoppelte Guided-Engine. Eine App baut einmal
-einen `GuidedReader` und ruft nur noch `next()` / `previous()` / `fullPage()` —
-null Guided-Logik in der App. Zusätzlich wird die Panel-Quelle pluggbar: neben
-dem geometrischen Detektor kann ein **ML-Modell** (YOLO11n, on-edge) Panels
-liefern.
+**Ziel:** Die Lib wird *die* entkoppelte Guided-Engine. Eine App ruft je
+Seitenbild `PanelGuide().guide(page)` und bekommt die Kacheln in Anzeige-
+Reihenfolge (oder die Vollseite als Fallback) — die rohe Sortier-/Fallback-
+Heuristik ist damit aus der App raus. Die Seiten-Verwaltung (welche Seite,
+Sprung, Fortschritt, Position) bleibt bewusst beim Reader. Zusätzlich wird die
+Panel-Quelle pluggbar: neben dem geometrischen Detektor kann ein **ML-Modell**
+(YOLO11n, on-edge) Panels liefern.
 
 Diese zwei Funktionen hängen an **einer Naht** — einer `PanelSource`-
 Schnittstelle. Darum wird die Naht zuerst gelegt; ML und Heuristik sind danach
@@ -32,7 +34,7 @@ comic-cutter            reiner Kern, NIE Native-Dep (KMP jvm+js)
   ├ RawDetection          roh-Box aus dem Modell (x,y,w,h,score,cls)
   ├ MlPanelSource         RawDetection[] → PanelRect[]  (conf-Filter + NMS + min-area, rein)
   ├ MlFilter              conf-Threshold / NMS-IoU / min-area-Parameter
-  └ GuidedReader          Facade: Panel-Cache + Position + Crop-Rect + Fallback
+  └ PanelGuide            guide(page): Bild → geordnete Crop-Rects + Vollseiten-Fallback
 comic-cutter-onnx-jvm   optionales Extra-Artefakt: OnnxModelRunner : ModelRunner
                           (ONNX-Runtime + Native lebt NUR hier)
 ```
@@ -47,7 +49,7 @@ comic-cutter-onnx-jvm   optionales Extra-Artefakt: OnnxModelRunner : ModelRunner
   (Variante-B-Bequemlichkeit), oder
 - ganz ohne ML nur `GeometricPanelSource` verwenden.
 
-Alle drei laufen gegen *dieselbe* `PanelSource`/`GuidedReader`-API.
+Alle drei laufen gegen *dieselbe* `PanelSource`/`PanelGuide`-API.
 
 > Ausrichtung: Das Tuning-Repo `komga-reader-guided-comic` nutzt bereits einen
 > `DetectorSeam` — dieselbe Naht-Idee. Die hier definierte `PanelSource` ist die
@@ -74,7 +76,7 @@ data class RawDetection(
 ```
 
 - `GeometricPanelSource` wrappt den heutigen `PanelDetector` hinter dem
-  Interface (liefert roh, das Sortieren übernimmt `GuidedReader`).
+  Interface (liefert roh, das Sortieren übernimmt `PanelGuide`).
 - `MlPanelSource(runner: ModelRunner, filter: MlFilter)` ist reines Mapping:
   `runner.infer(page)` → conf-Threshold → NMS (IoU) → min-area → `PanelRect[]`.
   Der Runner ist injiziert; das Mapping ist pur und voll testbar ohne Modell.
@@ -98,54 +100,59 @@ Pipeline (rein, deterministisch):
 4. Boxen kleiner `minAreaFraction * pageArea` verwerfen.
 5. `RawDetection` → `PanelRect`.
 
-Sortierung passiert NICHT hier, sondern zentral in `GuidedReader` (eine Quelle
+Sortierung passiert NICHT hier, sondern zentral in `PanelGuide` (eine Quelle
 für die Reihenfolge). `MlPanelSource` liefert ungeordnete `PanelRect`.
 
-## 5. GuidedReader — die extrahierte Heuristik
+## 5. PanelGuide — die extrahierte Heuristik (per Seite, zustandslos)
+
+**Grenze (wichtig):** Die Lib bekommt *ein Bild* und sagt, welche Kacheln es hat
+und in welcher Reihenfolge sie anzuzeigen sind. Die **Seiten-Verwaltung** —
+welche Seite gerade dran ist, Seitensprung, Fortschritt, Position merken/
+wiederherstellen — bleibt beim aufrufenden **Reader**. Die Lib hält dafür keinen
+State und navigiert nicht über Seitengrenzen.
 
 ```kotlin
-class GuidedReader(
-    private val source: PanelSource,
-    private val pageCount: Int,
-    private val loadPage: suspend (Int) -> RenderedPage,
-) {
-    suspend fun start(): GuidedStep                 // erste Einheit der ersten Seite
-    suspend fun next(): GuidedStep?                 // nächstes Panel, über Seitengrenzen; null am Ende
-    suspend fun previous(): GuidedStep?             // ein Panel zurück, über Seitengrenzen; null am Anfang
-    suspend fun fullPage(page: Int): GuidedStep     // ganze Seite als Einheit, falls gewollt
-    fun position(): GuidedPosition                  // aktueller State (für Persistenz/Restore)
-}
-
-/** Ein Schritt im geführten Lesefluss. */
-data class GuidedStep(
-    val page: Int,
-    val rect: NormRect,        // bild-normalisiertes Ziel-Rechteck (0..1)
-    val isFullPage: Boolean,   // true = Fallback / fullPage(): ganze Seite
+/** Geführte Anzeige-Schritte für EIN Seitenbild. steps ist nie leer (min. ein Schritt). */
+data class PageGuide(
+    val steps: List<NormRect>,   // geordnete Crop-Rects (0..1), Comics: links→rechts
+    val isFullPage: Boolean,     // true = <2 Kacheln → steps = [ NormRect(0,0,1,1) ]
 )
+
+class PanelGuide(private val source: PanelSource = GeometricPanelSource()) {
+    fun guide(page: RenderedPage): PageGuide   // detect → LTR-sort → normalize → Fallback
+}
 ```
 
-**Verantwortlichkeiten:**
+Reader-seitig (dessen Logik, ~3 Zeilen):
 
-- **Panel-Cache je Seite:** Die (teure) `source.detect` läuft genau einmal pro
-  Seite; Ergebnis gecacht. Spätere `next/previous` auf derselben Seite treffen
-  den Cache. (Prefetch der Folgeseite ist optional / Out-of-scope v1, siehe §10.)
+```kotlin
+val g = panelGuide.guide(currentPageImage)   // Reader hält die Seite
+showStep(g.steps[unit])                       // "next.kachel" = unit++ in steps
+// steps durch? → Reader lädt die nächste Seite selbst und ruft guide erneut
+```
+
+**Verantwortlichkeiten von `guide(page)`:**
+
 - **Sortierung:** intern `ReadingOrder.sort(boxes, LEFT_TO_RIGHT)`. Leserichtung
-  ist **fix links→rechts** (nur Comics) — kein Richtungs-Parameter nach außen,
-  kein Auto-Detect.
-- **Position-State:** hält `GuidedPosition(page, unit)`; `next/previous` nutzen
-  die bestehende `GuidedNavigator`-Indexlogik mit `unitsAt = cache-Lookup`.
-- **Confidence-Fallback:** Liefert die Quelle <2 Panels (echter Splash, Schrott-
-  Detection), hat die Seite genau 1 Einheit = ganze Seite, `isFullPage=true`.
-  Der Reader sieht nie kaputte Panels.
-- **Crop-Rect:** `GuidedStep.rect` ist die bild-normalisierte `NormRect` des
-  Panels (via `PanelGeometry.normalize`). `fullPage` → `NormRect(0,0,1,1)`.
+  **fix links→rechts** (nur Comics) — kein Richtungs-Parameter, kein Auto-Detect.
+- **Confidence-Fallback:** Liefert die Quelle <2 Kacheln (Splash, Schrott-
+  Detection), ist die ganze Seite ein Schritt (`isFullPage=true`,
+  `steps = [NormRect(0,0,1,1)]`). Der Reader sieht nie kaputte Kacheln.
+- **Crop-Rect:** jeder `step` ist die bild-normalisierte `NormRect` einer Kachel
+  (via `PanelGeometry.normalize`).
+- **Synchron, zustandslos:** reine Bild→Kacheln-Funktion. Threading (ML on-edge
+  im Hintergrund) macht der Reader; Caching der erkannten Kacheln je Seite
+  ebenfalls (er besitzt die Seiten). Deshalb kein `suspend`, keine coroutines-Dep.
 
 **Kein Viewport-Wissen in der Lib.** Die App besitzt bereits
-`PanelGeometry.fitScale` (Contain + Margin + Pivot=Panel-Mitte), das aus der
-`NormRect` zur Render-Zeit den Zoom-Faktor für den *konkreten* Viewport
-berechnet. Padding/Aspect bleiben damit Render-seitig (`marginFraction`),
-konsistent mit dem heutigen Code — die Lib liefert die Geometrie, die App fügt
-den Viewport hinzu. `GuidedReader` braucht deshalb keinen `viewportAspect`.
+`PanelGeometry.fitScale` (Contain + Margin + Pivot=Panel-Mitte), das aus einer
+`NormRect` zur Render-Zeit den Zoom-Faktor für den *konkreten* Viewport berechnet.
+Padding/Aspect bleiben damit Render-seitig (`marginFraction`) — die Lib liefert
+die Geometrie, die App fügt den Viewport hinzu.
+
+> **Hinweis:** Das bestehende `GuidedNavigator` (Cross-Page-Indexlogik) bleibt
+> als pre-existing API im Repo, wird von `PanelGuide` aber nicht mehr genutzt —
+> Seiten-Navigation ist jetzt Reader-Sache.
 
 ## 6. ML-Asset & Provenance
 
@@ -179,12 +186,13 @@ Implementierungsdetail des `OnnxModelRunner`.
 
 ## 7. Was sich für die App ändert
 
-- **Vorher:** App kennt den Detektor, sortiert selbst, rechnet Crops, hält die
-  Lese-Position, hat Fallback-Logik.
-- **Nachher:** App baut einmal `GuidedReader(source, pageCount, loadPage)` und
-  ruft `next()` / `previous()` / `fullPage()`. Den `GuidedStep.rect` reicht sie
-  in ihr bestehendes `fitScale` → „fahr dahin". Keine Guided-Logik mehr in der
-  App.
+- **Vorher:** App kennt den Detektor, sortiert selbst, rechnet Crops, entscheidet
+  Vollseiten-Fallback.
+- **Nachher:** App ruft je Seitenbild `PanelGuide().guide(page)` und bekommt
+  `PageGuide(steps, isFullPage)`. „next.kachel" = das nächste Element in `steps`
+  (Reader zählt selbst); jeden `step` reicht sie in ihr bestehendes `fitScale` →
+  „fahr dahin". Seiten-Verwaltung (welche Seite, Sprung, Fortschritt, Position
+  merken) bleibt beim Reader — die rohe Sortier-/Fallback-Heuristik nicht mehr.
 - Die bestehende `PanelDetector`-API und die `DetectorJs`-Browser-API bleiben
   rückwärtskompatibel (additive Änderung; `GeometricPanelSource` wrappt den
   Detektor, ersetzt ihn nicht).
@@ -195,9 +203,9 @@ Kern ist rein → ideal für TDD. Test-Liste:
 - `MlPanelSource`: conf-Filter, NMS (überlappende Boxen → eine), min-area,
   `keepClass`, RawDetection→PanelRect-Mapping. Mit Fake-`ModelRunner`, kein
   echtes Modell.
-- `GuidedReader`: Cache (Quelle nur 1× je Seite — Spy-Source mit Zähler),
-  `next/previous` über Seitengrenzen, Fallback bei <2 Panels (`isFullPage`),
-  `fullPage` → `NormRect(0,0,1,1)`, LTR-Reihenfolge, Position-Restore.
+- `PanelGuide`: LTR-Reihenfolge + Normalisierung der Kacheln (Fake-Source mit
+  unsortierten Boxen), Fallback bei <2 Kacheln (`isFullPage`, `steps =
+  [NormRect(0,0,1,1)]`), leere Seite → Vollseite.
 - `GeometricPanelSource`: liefert dieselben Boxen wie `PanelDetector.detect`
   (unsortiert) — Regressions-Anker.
 - `OnnxModelRunner` (jvm-Modul): Integrationstest mit echtem Mini-ONNX gegen
@@ -212,8 +220,8 @@ Kern ist rein → ideal für TDD. Test-Liste:
 
 ## 10. Out-of-Scope (YAGNI, v1)
 
-- Seiten-Prefetch / Lookahead-Threading (`loadPage` ist `suspend`, Prefetch
-  kann später additiv dazu).
+- Seiten-Verwaltung in der Lib (Cross-Page-Navigation, Position-State, Cache,
+  Prefetch) — bewusst Reader-Sache; die Lib ist per-Seite und zustandslos.
 - `comic-cutter-ort-wasm` (Browser-Runner) — erst wenn ein Browser-Konsument
   ML braucht; die Demo nutzt weiter den geometrischen Pfad.
 - Manga/RTL, Webtoon-vertikal, Auto-Leserichtung.
