@@ -1,47 +1,46 @@
 # Demo example pages — provenance
 
-All example pages are from **Pepper&Carrot** by **David Revoy** — a modern,
-professionally-drawn webcomic released under **CC BY 4.0**. Clean digital art
-with well-defined panels: the honest stage for the detector (versus golden-age
-newsprint, which is the pathological worst case). Each file is the artist's
-own low-res web export (1200 px width), unmodified.
+A mix of two sources, deliberately: modern clean digital art (where the detector
+shines) and golden-age newsprint with black panel frames (the hard case the
+detector is hardened for). Each file is downscaled to ≤ 1200 px width for the demo.
 
-Episode 6, „The Potion Contest“ (2015), pages 1–9.
+1. **Pepper&Carrot** by **David Revoy** — modern webcomic, **CC BY 4.0**.
+   Episode 6, „The Potion Contest“ (2015), pages 1, 7, 8, 9.
+2. **US golden-age comic interior pages** — **Public Domain** (framed multi-panel
+   story pages, no covers).
 
-## Attribution (CC BY 4.0 requires it)
+## Attribution
+
+Pepper&Carrot (CC BY 4.0 requires it):
 
 > „Pepper&Carrot“ © David Revoy — <https://www.peppercarrot.com> —
 > licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-The demo shows, under each page, the work title incl. author linked to the
-source episode and the linked license name — satisfying Title/Author/Source/
-License (TASL).
+The demo shows, under each page, the work title incl. author linked to its source
+and the linked license name (Title/Author/Source/License).
 
 | File | Title | Year | Source (permalink) | License | Captured |
 |------|-------|------|--------------------|---------|----------|
-| 01-pepper-carrot-ep06-p01.jpg | Pepper&Carrot #6 „The Potion Contest“ p.1 | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
-| 02-pepper-carrot-ep06-p02.jpg | Pepper&Carrot #6 „The Potion Contest“ p.2 | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
-| 03-pepper-carrot-ep06-p03.jpg | Pepper&Carrot #6 „The Potion Contest“ p.3 | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
-| 04-pepper-carrot-ep06-p04.jpg | Pepper&Carrot #6 „The Potion Contest“ p.4 | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
-| 05-pepper-carrot-ep06-p05.jpg | Pepper&Carrot #6 „The Potion Contest“ p.5 | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
-| 06-pepper-carrot-ep06-p06.jpg | Pepper&Carrot #6 „The Potion Contest“ p.6 | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
-| 07-pepper-carrot-ep06-p07.jpg | Pepper&Carrot #6 „The Potion Contest“ p.7 | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
-| 08-pepper-carrot-ep06-p08.jpg | Pepper&Carrot #6 „The Potion Contest“ p.8 | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
-| 09-pepper-carrot-ep06-p09.jpg | Pepper&Carrot #6 „The Potion Contest“ p.9 | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
+| 01-pepper-carrot-ep06-p01.jpg | Pepper&Carrot #6 „The Potion Contest“ p.1 — David Revoy | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
+| 02-amazing-man-6-n12.jpg | Amazing-Man Comics #6 p.12 (Centaur) | 1939 | https://archive.org/details/AmazingManComics006paper-nowC2c | Public Domain | 2026-06-12 |
+| 03-amazing-man-6-n15.jpg | Amazing-Man Comics #6 p.15 (Centaur) | 1939 | https://archive.org/details/AmazingManComics006paper-nowC2c | Public Domain | 2026-06-12 |
+| 04-amazing-man-16-n15.jpg | Amazing-Man Comics #16 p.15 (Centaur) | 1940 | https://archive.org/details/AmazingManComics016 | Public Domain | 2026-06-12 |
+| 05-amazing-man-23-n6.jpg | Amazing-Man Comics #23 p.6 (Centaur) | 1941 | https://archive.org/details/AmazingManComics023_70 | Public Domain | 2026-06-12 |
+| 06-boy-comics-108-n6.jpg | Boy Comics #108 p.6 (Lev Gleason) | 1955 | https://archive.org/details/BoyComics108 | Public Domain | 2026-06-12 |
+| 07-crack-comics-9-n9.jpg | Crack Comics #9 p.9 (Quality) | 1940 | https://archive.org/details/CrackComics009 | Public Domain | 2026-06-12 |
+| 08-pepper-carrot-ep06-p07.jpg | Pepper&Carrot #6 „The Potion Contest“ p.7 — David Revoy | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
+| 09-pepper-carrot-ep06-p08.jpg | Pepper&Carrot #6 „The Potion Contest“ p.8 — David Revoy | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
+| 10-pepper-carrot-ep06-p09.jpg | Pepper&Carrot #6 „The Potion Contest“ p.9 — David Revoy | 2015 | https://www.peppercarrot.com/en/webcomic/ep06_The-Potion-Contest.html | CC BY 4.0 | 2026-06-12 |
 
-## License note
+## License notes
 
-CC BY 4.0 is permissive: reuse (incl. commercial) is allowed **with attribution**.
-No ShareAlike, no NonCommercial. The pages are shown only as detector input
-(panel boxes overlaid); the comic itself is not redistributed as a standalone
-work. Attribution (author + source + license link) is visible per page in the
-demo and listed above.
-
-## Source
-
-Pepper&Carrot publishes hi-res sources and per-page web exports under
-<https://www.peppercarrot.com/en/sources.html>. The files here are the
-artist's low-res web exports, unmodified except for the demo's existing
-1200 px convention (the exports already ship at 1200 px width).
+- **CC BY 4.0** (Pepper&Carrot): permissive reuse incl. commercial **with attribution**.
+  No ShareAlike, no NonCommercial. Pages shown only as detector input (boxes overlaid),
+  not redistributed as a standalone work; attribution visible per page and above.
+- **Public Domain** (golden-age): rests on US copyright law (golden-age comics published
+  without valid notice / without renewal) and the source platform's labelling. Centaur
+  (Amazing-Man), Lev Gleason (Boy Comics) and Quality (Crack Comics) are long-established
+  public-domain golden-age publishers; no trademarked modern publisher characters. The
+  linked archive.org source is authoritative — verify there in case of doubt.
 
 Last full revision: 2026-06-12 (gabriel-graf)
