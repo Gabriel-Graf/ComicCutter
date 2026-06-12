@@ -87,7 +87,17 @@ function runDetection() {
 }
 
 function loadSrc(src: string) {
-  pageImg.onload = runDetection
+  // Stale-Overlay SOFORT entfernen: sonst bleiben die alten Boxen über dem alten Bild stehen,
+  // bis die synchrone Erkennung des NÄCHSTEN Bildes fertig ist — das wirkt stark verzögert.
+  lastPanels = []
+  clearOverlay(stage)
+  count.textContent = '…'
+  pageImg.onload = () => {
+    count.textContent = 'detecting…'
+    // Erst das neue Bild rendern lassen, DANN die (mehrere 100 ms blockierende) Erkennung —
+    // sonst erscheint das neue Bild erst nach der Rechenzeit. Doppeltes rAF = ein Paint dazwischen.
+    requestAnimationFrame(() => requestAnimationFrame(runDetection))
+  }
   pageImg.onerror = () => { count.textContent = 'image could not be loaded' }
   pageImg.src = src
 }

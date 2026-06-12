@@ -148,15 +148,18 @@ object GutterProfileCut {
         val r = win / 2
         if (w <= win || h <= win) return 0.0
         val sw = w + 1
-        val sum = LongArray(sw * (h + 1))
-        val sumSq = LongArray(sw * (h + 1))
+        // Double (nicht Long) für die Integral-Bilder: Kotlin/JS emuliert Long als Objekt — eine
+        // Pro-Pixel-Long-Schleife über ~1.6 MP kostet im Browser ~1 s. Double ist JS-nativ und stellt
+        // die Summen exakt dar (sumSq ≤ 255²·Pixel ≈ 1e11 ≪ 2^53). Auf der JVM identisch.
+        val sum = DoubleArray(sw * (h + 1))
+        val sumSq = DoubleArray(sw * (h + 1))
         for (y in 0 until h) {
-            var rowSum = 0L
-            var rowSqr = 0L
+            var rowSum = 0.0
+            var rowSqr = 0.0
             val above = y * sw
             val cur = (y + 1) * sw
             for (x in 0 until w) {
-                val v = lum[y * w + x].toLong()
+                val v = lum[y * w + x].toDouble()
                 rowSum += v; rowSqr += v * v
                 sum[cur + x + 1] = sum[above + x + 1] + rowSum
                 sumSq[cur + x + 1] = sumSq[above + x + 1] + rowSqr

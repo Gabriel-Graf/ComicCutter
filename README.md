@@ -37,7 +37,7 @@ repositories {
     maven("https://jitpack.io")
 }
 dependencies {
-    implementation("com.github.Gabriel-Graf:ComicGuide:0.2.1")
+    implementation("com.github.Gabriel-Graf:ComicGuide:0.2.2")
 }
 ```
 
@@ -45,7 +45,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("io.github.gabriel-graf:comic-cutter:0.2.1")
+    implementation("io.github.gabriel-graf:comic-cutter:0.2.2")
 }
 ```
 
