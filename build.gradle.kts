@@ -6,7 +6,7 @@ plugins {
 // io.github.<github-user> ist der von Sonatype auto-verifizierte Namespace.
 // Bei JitPack wird die group durch com.github.<user> ersetzt — dort egal.
 group = "io.github.gabriel-graf"
-version = "0.2.3"
+version = "0.3.0"
 
 repositories { mavenCentral() }
 
