@@ -84,4 +84,12 @@ class GuidedReaderTest {
         assertEquals(GuidedStep(0, NormRect(0f, 0f, 1f, 1f), true), r.start())
         assertNull(r.next())
     }
+
+    @Test
+    fun next_ohne_vorheriges_start_wirft_nicht() = runTest {
+        val spy = SpySource(mapOf(0 to listOf(PanelRect(10, 10, 30, 30), PanelRect(60, 10, 30, 30))))
+        val r = reader(spy, pages = 1)
+        val step = r.next()          // ohne start() — darf nicht werfen
+        assertEquals(0, step!!.page) // bleibt auf Seite 0
+    }
 }

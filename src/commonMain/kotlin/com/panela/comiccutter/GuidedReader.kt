@@ -4,8 +4,11 @@ import com.panela.comiccutter.model.RenderedPage
 
 /** Ein Schritt im geführten Lesefluss: Ziel-Rechteck einer Seite (bild-normalisiert). */
 data class GuidedStep(
+    /** Seitenindex (0-basiert). */
     val page: Int,
+    /** Ziel-Rechteck in bild-normalisierten Koordinaten (0..1); ganze Seite = (0,0,1,1). */
     val rect: NormRect,
+    /** true, wenn die ganze Seite gezeigt wird (Fallback bei <2 Panels oder fullPage()). */
     val isFullPage: Boolean,
 )
 
@@ -26,6 +29,7 @@ class GuidedReader(
     suspend fun start(): GuidedStep { pos = GuidedPosition(0, 0); return stepAt(pos) }
 
     suspend fun next(): GuidedStep? {
+        panels(pos.page)   // aktuelle Seite muss im Cache sein (auch ohne vorheriges start())
         val n = GuidedNavigator.next(pos, pageCount) { unitsAt(it) } ?: return null
         pos = n; return stepAt(pos)
     }
@@ -51,6 +55,7 @@ class GuidedReader(
         return GuidedStep(p.page, PanelGeometry.normalize(boxes[p.unit], w, h), isFullPage = false)
     }
 
+    /** Anzahl Navigations-Einheiten einer Seite (>=1). Precondition: panels(page) muss vorher gelaufen sein. */
     private fun unitsAt(page: Int): Int = cache[page]?.size?.coerceAtLeast(1)
         ?: error("Seite $page nicht geladen — panels() vor unitsAt aufrufen")
 
