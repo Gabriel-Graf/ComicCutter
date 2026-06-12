@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    application
     `maven-publish`
 }
 
@@ -16,6 +17,10 @@ dependencies {
 }
 
 kotlin { jvmToolchain(21) }
+
+// CLI-Einstieg: ein Modell (lokal | hf: | https) gegen ein Bild laufen lassen, Panels als JSON.
+//   ./gradlew :comic-cutter-onnx-jvm:run --args="--model … --image …"
+application { mainClass.set("com.panela.comiccutter.onnx.cli.Main") }
 
 java { withSourcesJar() }
 

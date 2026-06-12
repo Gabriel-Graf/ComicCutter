@@ -21,3 +21,6 @@ demo/src/kotlin/
 
 # Parity-Test: lokale venv (falls angelegt)
 comic-cutter-onnx-jvm/parity/.venv/
+
+# Claude Code lokale Projekt-State (Marker, settings.local) — maschinenspezifisch
+.claude/
