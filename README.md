@@ -74,7 +74,18 @@ Für die geführte Navigation siehe `GuidedNavigator` / `GuidedPosition`.
 | `RenderedPage` | Host-unabhängige Seite: `(width, height, IntArray /*ARGB*/)` |
 | `ReadingDirection` | `LEFT_TO_RIGHT` / `RIGHT_TO_LEFT` |
 | `PanelRect` / `NormRect` | Panel-Bounding-Box (Pixel bzw. normalisiert) |
-| `GuidedNavigator` | Panel-zu-Panel-Navigation über Seiten |
+| `PanelSource` | Naht: Kacheln aus Detektor (`GeometricPanelSource`) **oder** ML (`MlPanelSource`) |
+| `PanelGuide` | `guide(page): PageGuide` — Bild → geordnete Crop-Rects (+ Vollseiten-Fallback) |
+| `GuidedNavigator` | Panel-zu-Panel-Index-Logik über Seiten (Cross-Page; vom Reader nutzbar) |
+
+### ML-Quelle (optional)
+
+Die `PanelSource`-Naht erlaubt ein ML-Modell statt/neben dem geometrischen
+Detektor. Der Kern definiert nur `ModelRunner` (Interface) + `MlPanelSource` +
+`MlFilter` (conf/NMS/min-area, rein). Einen fertigen ONNX-Runner liefert das
+optionale JVM-Modul **`comic-cutter-onnx-jvm`** (`OnnxModelRunner`, ONNX-Runtime)
+— das **Modell selbst ist nicht Teil der Lib**, der Konsument reicht es zur
+Laufzeit rein. Details: [`comic-cutter-onnx-jvm/README.md`](comic-cutter-onnx-jvm/README.md).
 
 ## Bauen
 
