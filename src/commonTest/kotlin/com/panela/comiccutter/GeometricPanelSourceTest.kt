@@ -12,7 +12,7 @@ class GeometricPanelSourceTest {
         val px = IntArray(w * h) { 0xFFFFFFFF.toInt() }
         for (y in 10 until 90) for (x in 0 until w) {
             val gutter = x in 95..104
-            if (!gutter && (x < 95 || x > 104)) px[y * w + x] = 0xFF202020.toInt()
+            if (!gutter) px[y * w + x] = 0xFF202020.toInt()
         }
         val page = RenderedPage(w, h, px)
         val viaDetector = PanelDetector().detect(page, ReadingDirection.LEFT_TO_RIGHT)

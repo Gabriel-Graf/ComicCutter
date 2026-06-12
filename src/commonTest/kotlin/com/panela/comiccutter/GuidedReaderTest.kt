@@ -91,5 +91,8 @@ class GuidedReaderTest {
         val r = reader(spy, pages = 1)
         val step = r.next()          // ohne start() — darf nicht werfen
         assertEquals(0, step!!.page) // bleibt auf Seite 0
+        // Ohne start() steht pos auf (0,0); next() rückt regulär auf Einheit 1 vor —
+        // Einheit 0 wird übersprungen. start() ist der Weg, die erste Einheit zu sehen.
+        assertEquals(1, r.position().unit)
     }
 }
