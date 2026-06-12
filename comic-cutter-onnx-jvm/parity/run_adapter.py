@@ -36,6 +36,9 @@ def main():
     # adapter.py als Modul laden
     import importlib.util
     spec = importlib.util.spec_from_file_location("adapter", adapter_path)
+    if spec is None or spec.loader is None:
+        print(f"adapter.py nicht ladbar: {adapter_path}", file=sys.stderr)
+        sys.exit(2)
     adapter = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(adapter)
 
