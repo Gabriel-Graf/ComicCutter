@@ -9,14 +9,15 @@ import com.panela.comiccutter.model.RenderedPage
 import java.nio.FloatBuffer
 
 /**
- * [ModelRunner] auf ONNX-Runtime. Das Modell-Spezifische (Input-Geometrie, Preprocessing,
- * Output-Decode) liegt im [OnnxAdapter]; dieser Runner macht nur das Session-Plumbing:
- * Session aus [modelBytes] laden, Input-Tensor bauen, `session.run`, Tensor schließen.
+ * [ModelRunner] on top of the ONNX Runtime. The model-specific part (input geometry,
+ * preprocessing, output decode) lives in the [OnnxAdapter]; this runner only does the session
+ * plumbing: load the session from [modelBytes], build the input tensor, `session.run`, close the
+ * tensor.
  *
- * Default-Adapter ist [Yolo11Adapter] (Festkontrakt YOLO11 single-class). Für ein abweichendes
- * Modell einen eigenen [OnnxAdapter] reichen — kein Python, keine Runner-Änderung.
+ * The default adapter is [Yolo11Adapter] (fixed contract YOLO11 single-class). For a different
+ * model, pass your own [OnnxAdapter] — no Python, no runner change.
  *
- * Das Modell ist NICHT Teil der Lib: [modelBytes] reicht der Konsument zur Laufzeit rein.
+ * The model is NOT part of the library: the consumer passes [modelBytes] in at runtime.
  */
 class OnnxModelRunner(
     modelBytes: ByteArray,

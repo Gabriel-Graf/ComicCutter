@@ -11,37 +11,37 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Numerischer Paritäts-Test: Kotlin OnnxModelRunner vs. Python adapter.py.
+ * Numerical parity test: Kotlin OnnxModelRunner vs. Python adapter.py.
  *
- * Überprüft dass beide Seiten auf demselben Bild mit demselben Modell (best.int8.onnx)
- * identische Panel-Boxen liefern. Kriterium: gleiche Anzahl + jede gematchte Box-Pair hat
- * IoU ≥ 0.95 (int-Rundung → ~0.99 erwartet).
+ * Verifies that both sides return identical panel boxes on the same image with the same
+ * model (best.int8.onnx). Criterion: same count + every matched box pair has
+ * IoU ≥ 0.95 (int rounding → ~0.99 expected).
  *
- * Skip-Bedingungen (CI ohne lokale Ressourcen bleibt grün):
- * - Modelldatei fehlt
- * - Testbild fehlt
- * - Python / onnxruntime / cv2 nicht verfügbar
+ * Skip conditions (CI without local resources stays green):
+ * - model file missing
+ * - test image missing
+ * - Python / onnxruntime / cv2 not available
  */
 class OnnxModelRunnerParityTest {
 
-    /** Env PANEL_ONNX_MODEL oder Fallback auf mllabeltool-Modellpfad. */
+    /** Env PANEL_ONNX_MODEL or fallback to the mllabeltool model path. */
     private val modelPath: String =
         System.getenv("PANEL_ONNX_MODEL")
             ?: "${System.getProperty("user.home")}/Documents/Projekte/mllabeltool/models/yolo_v3/best.int8.onnx"
 
-    /** Modellverzeichnis (enthält adapter.py). */
+    /** Model directory (contains adapter.py). */
     private val modelDir: String = File(modelPath).parent ?: ""
 
-    /** Wrapper-Script (neben dieser Datei im parity/-Verzeichnis). */
+    /** Wrapper script (next to this file in the parity/ directory). */
     private val wrapperScript: String =
         "${System.getProperty("user.home")}/Documents/Projekte/GuidedComic/comic-cutter-onnx-jvm/parity/run_adapter.py"
 
-    /** Bild: dasselbe für beide Seiten. */
+    /** Image: the same for both sides. */
     private val imagePath: String =
         "${System.getProperty("user.home")}/Documents/Projekte/GuidedComic/demo/dist/comics/01-pepper-carrot-ep06-p01.jpg"
 
     /**
-     * Python-Interpreter: Env PARITY_PYTHON, sonst mllabeltool-.venv, sonst python3.
+     * Python interpreter: env PARITY_PYTHON, otherwise the mllabeltool .venv, otherwise python3.
      */
     private val pythonInterpreter: String =
         System.getenv("PARITY_PYTHON")
@@ -51,45 +51,45 @@ class OnnxModelRunnerParityTest {
             }
 
     @Test
-    fun kotlinUndPythonLiefernGleicheBoxen() {
-        // --- Skip-Bedingungen ---
+    fun kotlin_and_python_return_the_same_boxes() {
+        // --- Skip conditions ---
         val modelFile = File(modelPath)
         if (!modelFile.exists()) {
-            println("[parity-skip] Modell nicht gefunden: $modelPath")
+            println("[parity-skip] model not found: $modelPath")
             return
         }
         val imageFile = File(imagePath)
         if (!imageFile.exists()) {
-            println("[parity-skip] Testbild nicht gefunden: $imagePath")
+            println("[parity-skip] test image not found: $imagePath")
             return
         }
         val wrapperFile = File(wrapperScript)
         if (!wrapperFile.exists()) {
-            println("[parity-skip] Wrapper-Script nicht gefunden: $wrapperScript")
+            println("[parity-skip] wrapper script not found: $wrapperScript")
             return
         }
         if (!pythonHasDeps()) {
-            println("[parity-skip] Python-Deps (onnxruntime/numpy/cv2) nicht verfügbar unter: $pythonInterpreter")
+            println("[parity-skip] Python deps (onnxruntime/numpy/cv2) not available at: $pythonInterpreter")
             return
         }
 
-        // --- Python-Seite ---
+        // --- Python side ---
         val pyBoxes = runPythonAdapter()
-        println("[parity] Python-Boxen (${pyBoxes.size}):")
+        println("[parity] Python boxes (${pyBoxes.size}):")
         pyBoxes.forEachIndexed { i, b -> println("  py[$i] x=${b[0]}, y=${b[1]}, w=${b[2]}, h=${b[3]}, score=${b[4]}") }
 
-        // --- Kotlin-Seite ---
+        // --- Kotlin side ---
         val ktBoxes = runKotlinDetector(modelFile, imageFile)
-        println("[parity] Kotlin-Boxen (${ktBoxes.size}):")
+        println("[parity] Kotlin boxes (${ktBoxes.size}):")
         ktBoxes.forEachIndexed { i, b -> println("  kt[$i] x=${b.x}, y=${b.y}, w=${b.width}, h=${b.height}") }
 
-        // --- Paritäts-Prüfung ---
+        // --- Parity check ---
         val pyCount = pyBoxes.size
         val ktCount = ktBoxes.size
 
         if (pyCount != ktCount) {
             val msg = buildString {
-                append("PARITY FAIL: Python lieferte $pyCount Boxen, Kotlin $ktCount Boxen.\n")
+                append("PARITY FAIL: Python returned $pyCount boxes, Kotlin $ktCount boxes.\n")
                 append("Python: ${pyBoxes.map { "[${it[0]},${it[1]},${it[2]},${it[3]}]" }}\n")
                 append("Kotlin: ${ktBoxes.map { "[${it.x},${it.y},${it.width},${it.height}]" }}")
             }
@@ -97,7 +97,7 @@ class OnnxModelRunnerParityTest {
             assertEquals(pyCount, ktCount, msg)
         }
 
-        // Greedy-IoU-Match: für jede Python-Box die Kotlin-Box mit höchstem IoU
+        // Greedy IoU match: for each Python box the Kotlin box with the highest IoU
         val matched = greedyMatch(pyBoxes, ktBoxes)
         val ious = matched.map { (py, kt) ->
             val iou = boxIoU(
@@ -107,29 +107,29 @@ class OnnxModelRunnerParityTest {
             Triple(py, kt, iou)
         }
 
-        println("[parity] Matched pairs mit IoU:")
+        println("[parity] Matched pairs with IoU:")
         ious.forEachIndexed { i, (py, kt, iou) ->
             println("  [$i] py=[${py[0]},${py[1]},${py[2]},${py[3]}] ↔ kt=[${kt.x},${kt.y},${kt.width},${kt.height}]  IoU=${"%.4f".format(iou)}")
         }
 
         val worstIou = ious.minOfOrNull { it.third } ?: 1.0
-        println("[parity] Schlechtester IoU: ${"%.4f".format(worstIou)} (Schwelle: 0.95)")
+        println("[parity] Worst IoU: ${"%.4f".format(worstIou)} (threshold: 0.95)")
 
         val failPairs = ious.filter { it.third < 0.95 }
         if (failPairs.isNotEmpty()) {
             val msg = buildString {
-                append("PARITY FAIL: ${failPairs.size} Boxen unter IoU 0.95.\n")
+                append("PARITY FAIL: ${failPairs.size} boxes below IoU 0.95.\n")
                 failPairs.forEach { (py, kt, iou) ->
                     append("  IoU=${"%.4f".format(iou)}  py=[${py[0]},${py[1]},${py[2]},${py[3]}] ↔ kt=[${kt.x},${kt.y},${kt.width},${kt.height}]\n")
                 }
-                append("Python gesamt: ${pyBoxes.map { "[${it[0]},${it[1]},${it[2]},${it[3]}]" }}\n")
-                append("Kotlin gesamt: ${ktBoxes.map { "[${it.x},${it.y},${it.width},${it.height}]" }}")
+                append("Python total: ${pyBoxes.map { "[${it[0]},${it[1]},${it[2]},${it[3]}]" }}\n")
+                append("Kotlin total: ${ktBoxes.map { "[${it.x},${it.y},${it.width},${it.height}]" }}")
             }
             println(msg)
             assertTrue(failPairs.isEmpty(), msg)
         }
 
-        println("[parity] PASS — alle ${ious.size} Boxen, schlechtester IoU=${"%.4f".format(worstIou)} ≥ 0.95")
+        println("[parity] PASS — all ${ious.size} boxes, worst IoU=${"%.4f".format(worstIou)} ≥ 0.95")
     }
 
     private fun pythonHasDeps(): Boolean {
@@ -143,7 +143,7 @@ class OnnxModelRunnerParityTest {
         }
     }
 
-    /** Ruft run_adapter.py auf und parst die JSON-Ausgabe als List<DoubleArray(5)>. */
+    /** Calls run_adapter.py and parses the JSON output as List<DoubleArray(5)>. */
     private fun runPythonAdapter(): List<DoubleArray> {
         val proc = ProcessBuilder(pythonInterpreter, wrapperScript, modelDir, imagePath)
             .redirectErrorStream(false)
@@ -152,17 +152,17 @@ class OnnxModelRunnerParityTest {
         val stderr = proc.errorStream.bufferedReader().readText().trim()
         val exit = proc.waitFor()
         if (exit != 0) {
-            error("run_adapter.py fehlgeschlagen (exit $exit).\nSTDERR: $stderr\nSTDOUT: $stdout")
+            error("run_adapter.py failed (exit $exit).\nSTDERR: $stderr\nSTDOUT: $stdout")
         }
         return parseJsonArray(stdout)
     }
 
-    /** Einfacher JSON-Parser für [[x,y,w,h,s],...] ohne externe Deps. */
+    /** Simple JSON parser for [[x,y,w,h,s],...] without external deps. */
     private fun parseJsonArray(json: String): List<DoubleArray> {
-        // Entferne äußere Klammern, split nach "]," um innere Arrays zu trennen
+        // Remove outer brackets, split on "]," to separate inner arrays
         val trimmed = json.trim().removeSurrounding("[", "]").trim()
         if (trimmed.isEmpty()) return emptyList()
-        // Split an ], [ Grenzen
+        // Split at ], [ boundaries
         val entries = trimmed.split(Regex("""\]\s*,\s*\["""))
         return entries.map { entry ->
             val nums = entry.trim().trim('[', ']').split(",")
@@ -179,7 +179,7 @@ class OnnxModelRunnerParityTest {
     }
 
     private fun loadPage(file: File): RenderedPage {
-        val img = ImageIO.read(file) ?: error("Bild nicht lesbar: ${file.path}")
+        val img = ImageIO.read(file) ?: error("image not readable: ${file.path}")
         val w = img.width
         val h = img.height
         val px = IntArray(w * h)
@@ -188,8 +188,8 @@ class OnnxModelRunnerParityTest {
     }
 
     /**
-     * Greedy-IoU-Match: für jede Python-Box die noch nicht gematchte Kotlin-Box mit höchstem IoU.
-     * Gibt Paare (pyBox, ktBox) zurück.
+     * Greedy IoU match: for each Python box the not-yet-matched Kotlin box with the highest IoU.
+     * Returns pairs (pyBox, ktBox).
      */
     private fun greedyMatch(
         pyBoxes: List<DoubleArray>,
@@ -199,13 +199,13 @@ class OnnxModelRunnerParityTest {
         return pyBoxes.map { py ->
             val best = remaining.maxByOrNull { kt ->
                 boxIoU(py[0], py[1], py[2], py[3], kt.x.toDouble(), kt.y.toDouble(), kt.width.toDouble(), kt.height.toDouble())
-            } ?: error("Keine Kotlin-Box mehr zum Matchen")
+            } ?: error("no Kotlin box left to match")
             remaining.remove(best)
             Pair(py, best)
         }
     }
 
-    /** IoU zweier Boxen im Format (x, y, width, height). */
+    /** IoU of two boxes in the format (x, y, width, height). */
     private fun boxIoU(ax: Double, ay: Double, aw: Double, ah: Double, bx: Double, by: Double, bw: Double, bh: Double): Double {
         val ix = maxOf(ax, bx)
         val iy = maxOf(ay, by)

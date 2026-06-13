@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
 
-// base = Repo-Name, damit Asset-Pfade unter gabriel-graf.github.io/ComicCutter/ stimmen.
-// Das Kotlin/JS-Bundle ist ein CommonJS/UMD-Modul in src/ — der commonjs-Plugin
-// von Rollup greift dort standardmäßig nicht (nur node_modules), daher explizit
-// einbinden, damit der Default-Import (`import cc from '…/comic-cutter.js'`) auflöst.
+// base = repo name, so that asset paths under gabriel-graf.github.io/ComicCutter/ are correct.
+// The Kotlin/JS bundle is a CommonJS/UMD module in src/ — Rollup's commonjs plugin
+// doesn't apply there by default (only node_modules), so include it explicitly
+// so that the default import (`import cc from '…/comic-cutter.js'`) resolves.
 export default defineConfig({
   base: '/ComicCutter/',
   build: {

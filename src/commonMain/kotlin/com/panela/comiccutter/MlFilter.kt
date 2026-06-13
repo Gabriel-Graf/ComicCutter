@@ -1,13 +1,13 @@
 package com.panela.comiccutter
 
 /**
- * Reine Filter-Pipeline Modell-Output → Panel-Boxen: conf-Threshold → optionaler
- * Klassen-Filter → NMS (IoU) → min-Fläche. Deterministisch, ohne Modell testbar.
+ * Pure filter pipeline from model output to panel boxes: conf threshold → optional
+ * class filter → NMS (IoU) → min area. Deterministic, testable without a model.
  *
- * @param minScore         Detektionen unter diesem Score werden verworfen.
- * @param nmsIoU           Zwei Boxen mit IoU >= diesem Wert gelten als dieselbe; die schwächere fällt.
- * @param minAreaFraction  Boxen kleiner als dieser Seitenflächen-Anteil werden verworfen.
- * @param keepClass        Wenn gesetzt: nur Detektionen dieser Klasse behalten.
+ * @param minScore         Detections below this score are discarded.
+ * @param nmsIoU           Two boxes with IoU >= this value are treated as the same; the weaker one is dropped.
+ * @param minAreaFraction  Boxes smaller than this fraction of the page area are discarded.
+ * @param keepClass        If set: keep only detections of this class.
  */
 data class MlFilter(
     val minScore: Float = 0.30f,
@@ -25,7 +25,7 @@ data class MlFilter(
         return nms(kept).map { PanelRect(it.x, it.y, it.width, it.height) }
     }
 
-    /** Greedy-NMS: stärkste zuerst, unterdrückt jede spätere Box mit IoU >= [nmsIoU]. */
+    /** Greedy NMS: strongest first, suppresses every later box with IoU >= [nmsIoU]. */
     private fun nms(sortedByScore: List<RawDetection>): List<RawDetection> {
         val kept = mutableListOf<RawDetection>()
         for (d in sortedByScore) {

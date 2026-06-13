@@ -1,8 +1,8 @@
 package com.panela.comiccutter
 
 /**
- * Labelt zusammenhängende NICHT-geflutete Regionen (= von Guttern umschlossene Panels)
- * per 8-Konnektivitäts-BFS und liefert deren Bounding-Boxes. Reines Kotlin.
+ * Labels connected NON-flooded regions (= panels enclosed by gutters)
+ * via 8-connectivity BFS and returns their bounding boxes. Pure Kotlin.
  */
 object RegionLabeling {
 

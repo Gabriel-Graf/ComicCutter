@@ -12,20 +12,20 @@ class ImageBinarizationTest {
     }
 
     @Test
-    fun `Luminanz aus ARGB`() {
+    fun `luminance from ARGB`() {
         assertEquals(0, ImageBinarization.luminance(0xFF000000.toInt()))
         assertEquals(255, ImageBinarization.luminance(0xFFFFFFFF.toInt()))
     }
 
     @Test
-    fun `Otsu trennt zwei klar getrennte Populationen`() {
+    fun `Otsu separates two clearly distinct populations`() {
         val p = page(10, 10, 10, 10, 240, 240, 240, 240)
         val t = ImageBinarization.otsuThreshold(p)
-        assertTrue(t in 10..239, "Schwelle war $t")
+        assertTrue(t in 10..239, "threshold was $t")
     }
 
     @Test
-    fun `backgroundMask markiert helle Pixel als Hintergrund`() {
+    fun `backgroundMask marks light pixels as background`() {
         val p = page(10, 240)
         val mask = ImageBinarization.backgroundMask(p, threshold = 128)
         assertEquals(false, mask[0])

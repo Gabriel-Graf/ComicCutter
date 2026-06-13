@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Wrapper: Ruft adapter.py auf und gibt Detektionen als JSON-Array nach stdout aus.
+"""Wrapper: calls adapter.py and prints detections as a JSON array to stdout.
 
-Aufruf:
+Usage:
     python run_adapter.py <model_dir> <image_path>
 
-Ausgabe (stdout, genau eine Zeile):
-    [[x, y, w, h, score], ...]   -- Pixel-Koordinaten wie von adapter.predict()
+Output (stdout, exactly one line):
+    [[x, y, w, h, score], ...]   -- pixel coordinates as returned by adapter.predict()
 
-Interpreter-Wahl (Reihenfolge):
+Interpreter selection (in order):
   1. Env PARITY_PYTHON
-  2. /home/gabriel/Documents/Projekte/mllabeltool/.venv/bin/python  (Fallback)
+  2. /home/gabriel/Documents/Projekte/mllabeltool/.venv/bin/python  (fallback)
   3. python3
 
-Dieser Wrapper wird vom JUnit-Test OnnxModelRunnerParityTest via ProcessBuilder aufgerufen.
+This wrapper is invoked by the JUnit test OnnxModelRunnerParityTest via ProcessBuilder.
 """
 
 import json
@@ -27,17 +27,17 @@ def main():
     model_dir = sys.argv[1]
     image_path = sys.argv[2]
 
-    # adapter.py im selben Verzeichnis wie model_dir suchen (mllabeltool/models/yolo_v3/)
+    # look for adapter.py in the same directory as model_dir (mllabeltool/models/yolo_v3/)
     adapter_path = os.path.join(model_dir, "adapter.py")
     if not os.path.isfile(adapter_path):
-        print(f"ERROR: adapter.py nicht gefunden: {adapter_path}", file=sys.stderr)
+        print(f"ERROR: adapter.py not found: {adapter_path}", file=sys.stderr)
         sys.exit(2)
 
-    # adapter.py als Modul laden
+    # load adapter.py as a module
     import importlib.util
     spec = importlib.util.spec_from_file_location("adapter", adapter_path)
     if spec is None or spec.loader is None:
-        print(f"adapter.py nicht ladbar: {adapter_path}", file=sys.stderr)
+        print(f"adapter.py not loadable: {adapter_path}", file=sys.stderr)
         sys.exit(2)
     adapter = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(adapter)

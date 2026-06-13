@@ -4,21 +4,21 @@ plugins {
     `maven-publish`
 }
 
-// Koordinaten vom Root erben (Single Source of Truth): io.github.gabriel-graf:comic-cutter-onnx-jvm:<version>
+// Inherit coordinates from root (single source of truth): io.github.gabriel-graf:comic-cutter-onnx-jvm:<version>
 group = rootProject.group
 version = rootProject.version
 
 repositories { mavenCentral() }
 
 dependencies {
-    implementation(project(":"))                                 // comic-cutter (KMP → jvm-Variante via Metadata)
+    implementation(project(":"))                                 // comic-cutter (KMP → jvm variant via metadata)
     implementation("com.microsoft.onnxruntime:onnxruntime:1.20.0")
     testImplementation(kotlin("test"))
 }
 
 kotlin { jvmToolchain(21) }
 
-// CLI-Einstieg: ein Modell (lokal | hf: | https) gegen ein Bild laufen lassen, Panels als JSON.
+// CLI entry point: run a model (local | hf: | https) against an image, output panels as JSON.
 //   ./gradlew :comic-cutter-onnx-jvm:run --args="--model … --image …"
 application { mainClass.set("com.panela.comiccutter.onnx.cli.Main") }
 
@@ -33,8 +33,8 @@ publishing {
             pom {
                 name.set("ComicCutter — ONNX-Runner (JVM)")
                 description.set(
-                    "Optionaler ONNX-Runtime-ModelRunner für ComicCutter: führt ein YOLO11 " +
-                        "single-class Panel-Modell on-edge aus. Modell nicht enthalten."
+                    "Optional ONNX-Runtime ModelRunner for ComicCutter: runs a YOLO11 " +
+                        "single-class panel model on-edge. Model not included."
                 )
                 url.set("https://github.com/Gabriel-Graf/ComicCutter")
                 licenses {

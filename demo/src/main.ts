@@ -68,10 +68,10 @@ const nextBtn = app.querySelector<HTMLButtonElement>('#next')!
 const clearBtn = app.querySelector<HTMLButtonElement>('#clear')!
 const verBadge = app.querySelector<HTMLSpanElement>('#ver')!
 
-// Tatsächlich gebaute Lib-Version (= Release-Tag) anzeigen, damit klar ist, was deployt wurde.
+// Show the actually built library version (= release tag), so it's clear what was deployed.
 verBadge.textContent = `v${LIB_VERSION}`
 
-/** Setzt Panel-Zähler + Status-Punkt (loading | result | idle). */
+/** Sets the panel counter + status dot (loading | result | idle). */
 function setCount(text: string, mode: 'loading' | 'result' | 'idle') {
   count.textContent = text
   count.classList.toggle('loading', mode === 'loading')
@@ -113,15 +113,15 @@ function runDetection() {
 }
 
 function loadSrc(src: string) {
-  // Stale-Overlay SOFORT entfernen: sonst bleiben die alten Boxen über dem alten Bild stehen,
-  // bis die synchrone Erkennung des NÄCHSTEN Bildes fertig ist — das wirkt stark verzögert.
+  // Remove the stale overlay IMMEDIATELY: otherwise the old boxes stay on top of the old image
+  // until the synchronous detection of the NEXT image finishes — which feels heavily delayed.
   lastPanels = []
   clearOverlay(stage)
   setCount('loading', 'loading')
   pageImg.onload = () => {
     setCount('detecting', 'loading')
-    // Erst das neue Bild rendern lassen, DANN die (mehrere 100 ms blockierende) Erkennung —
-    // sonst erscheint das neue Bild erst nach der Rechenzeit. Doppeltes rAF = ein Paint dazwischen.
+    // Let the new image render FIRST, THEN run detection (which blocks for several 100 ms) —
+    // otherwise the new image only appears after the compute time. Double rAF = one paint in between.
     requestAnimationFrame(() => requestAnimationFrame(runDetection))
   }
   pageImg.onerror = () => { setCount('load error', 'idle') }
@@ -152,8 +152,8 @@ function showUpload(file: File) {
   loadSrc(uploadUrl)
 }
 
-// no-cache: comics.json hat eine stabile URL — sonst zeigt der Browser-Cache
-// nach einem Update veraltete Einträge (mit nicht mehr existierenden Dateien).
+// no-cache: comics.json has a stable URL — otherwise the browser cache would show
+// stale entries after an update (referencing files that no longer exist).
 fetch(`${import.meta.env.BASE_URL}comics.json`, { cache: 'no-cache' })
   .then((r) => r.json())
   .then((list: ComicEntry[]) => {

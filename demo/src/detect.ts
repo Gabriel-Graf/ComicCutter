@@ -1,5 +1,5 @@
-// Kotlin/JS-Fassade — Webpack-Dist ist CommonJS mit Default-Export (kein named ESM).
-// @ts-expect-error – generiertes Bundle ohne Typdeklarationen
+// Kotlin/JS facade — the Webpack dist is CommonJS with a default export (not named ESM).
+// @ts-expect-error – generated bundle without type declarations
 import cc from './kotlin/comic-cutter.js'
 
 export interface Panel {

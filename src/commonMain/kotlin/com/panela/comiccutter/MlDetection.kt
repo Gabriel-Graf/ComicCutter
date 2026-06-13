@@ -2,7 +2,7 @@ package com.panela.comiccutter
 
 import com.panela.comiccutter.model.RenderedPage
 
-/** Eine rohe Modell-Detektion vor Filterung, in Seiten-Pixel-Koordinaten. */
+/** A raw model detection before filtering, in page pixel coordinates. */
 data class RawDetection(
     val x: Int,
     val y: Int,
@@ -13,8 +13,8 @@ data class RawDetection(
 )
 
 /**
- * Führt das Panel-Modell aus. Implementiert von der App (eigene Inferenz) ODER vom
- * optionalen Modul comic-cutter-onnx-jvm. Der Kern bleibt dadurch Native-frei.
+ * Runs the panel model. Implemented either by the app (its own inference) OR by the
+ * optional comic-cutter-onnx-jvm module. This keeps the core free of native code.
  */
 interface ModelRunner {
     fun infer(page: RenderedPage): List<RawDetection>

@@ -10,8 +10,8 @@ class PanelGuideTest {
     private val page = RenderedPage(100, 100, IntArray(1))
 
     @Test
-    fun ordnet_und_normalisiert_kacheln_LTR() {
-        // rechts (x=60) zuerst eingefügt, links (x=10) danach → LTR sortiert links zuerst
+    fun orders_and_normalizes_tiles_LTR() {
+        // right (x=60) inserted first, left (x=10) after → LTR sorts left first
         val source = PanelSource { listOf(PanelRect(60, 10, 30, 30), PanelRect(10, 10, 30, 30)) }
         val g = PanelGuide(source).guide(page)
         assertFalse(g.isFullPage)
@@ -25,7 +25,7 @@ class PanelGuideTest {
     }
 
     @Test
-    fun unter_2_kacheln_ist_vollseite() {
+    fun fewer_than_2_tiles_is_full_page() {
         val source = PanelSource { listOf(PanelRect(10, 10, 80, 80)) }
         val g = PanelGuide(source).guide(page)
         assertTrue(g.isFullPage)
@@ -33,7 +33,7 @@ class PanelGuideTest {
     }
 
     @Test
-    fun leere_seite_ist_vollseite() {
+    fun empty_page_is_full_page() {
         val source = PanelSource { emptyList() }
         val g = PanelGuide(source).guide(page)
         assertTrue(g.isFullPage)

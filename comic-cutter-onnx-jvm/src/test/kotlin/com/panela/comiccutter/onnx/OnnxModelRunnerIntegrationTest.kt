@@ -10,9 +10,9 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Smoke-Integration gegen das ECHTE INT8-Modell (nicht im Repo). Modellpfad via
- * Env `PANEL_ONNX_MODEL`, sonst der lokale Spike-Pfad. Fehlt das Modell, überspringt
- * sich der Test (CI ohne Modell bleibt grün) — daher kein Assert-Fail, sondern `return`.
+ * Smoke integration against the REAL INT8 model (not in the repo). Model path via
+ * env `PANEL_ONNX_MODEL`, otherwise the local spike path. If the model is missing, the
+ * test skips itself (CI without the model stays green) — hence no assert fail, just `return`.
  */
 class OnnxModelRunnerIntegrationTest {
 
@@ -21,15 +21,15 @@ class OnnxModelRunnerIntegrationTest {
             ?: "${System.getProperty("user.home")}/Documents/Projekte/komga-yolo-spike/yolo/runs/panel_v3/weights/best.int8.onnx"
 
     @Test
-    fun erkennt_mehrere_panels_auf_einer_echten_seite() {
+    fun detects_multiple_panels_on_a_real_page() {
         val model = File(modelPath)
         if (!model.exists()) {
-            println("[skip] Modell nicht gefunden: $modelPath")
+            println("[skip] model not found: $modelPath")
             return
         }
         val image = File("../demo/dist/comics/01-pepper-carrot-ep06-p01.jpg")
         if (!image.exists()) {
-            println("[skip] Testbild nicht gefunden (demo/dist ist gitignored): ${image.path}")
+            println("[skip] test image not found (demo/dist is gitignored): ${image.path}")
             return
         }
         val page = loadPage(image)
@@ -38,16 +38,16 @@ class OnnxModelRunnerIntegrationTest {
             val source = MlPanelSource(runner, MlFilter(minScore = 0.25f, nmsIoU = 0.7f))
             val guide = PanelGuide(source).guide(page)
 
-            println("[onnx] erkannte Schritte: ${guide.steps.size}, isFullPage=${guide.isFullPage}")
-            assertTrue(guide.steps.isNotEmpty(), "Pipeline lieferte keine Schritte")
-            assertTrue(!guide.isFullPage && guide.steps.size >= 2, "erwartet ≥2 Panels auf einer Mehr-Panel-Seite")
+            println("[onnx] detected steps: ${guide.steps.size}, isFullPage=${guide.isFullPage}")
+            assertTrue(guide.steps.isNotEmpty(), "pipeline returned no steps")
+            assertTrue(!guide.isFullPage && guide.steps.size >= 2, "expected ≥2 panels on a multi-panel page")
         }
     }
 
-    /** JPG → host-unabhängige RenderedPage (ARGB-IntArray). Nur im jvm-Testmodul (AWT erlaubt). */
+    /** JPG → host-independent RenderedPage (ARGB IntArray). Only in the jvm test module (AWT allowed). */
     private fun loadPage(file: File): RenderedPage {
         val img = ImageIO.read(file)
-            ?: error("Bild nicht lesbar: ${file.path}")
+            ?: error("image not readable: ${file.path}")
         val w = img.width
         val h = img.height
         val px = IntArray(w * h)

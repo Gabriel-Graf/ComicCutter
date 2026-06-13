@@ -10,10 +10,10 @@ import kotlin.test.assertTrue
 class CliArgsTest {
 
     @Test
-    fun minimal_setzt_pflichtfelder_und_defaults() {
-        val args = CliArgs.parse(arrayOf("--model", "best.onnx", "--image", "seite.jpg"))
+    fun minimal_sets_required_fields_and_defaults() {
+        val args = CliArgs.parse(arrayOf("--model", "best.onnx", "--image", "page.jpg"))
         assertEquals("best.onnx", args.model)
-        assertEquals("seite.jpg", args.image)
+        assertEquals("page.jpg", args.image)
         assertEquals("yolo11", args.adapter)
         assertEquals(1024, args.inputSize)
         assertEquals(0.25f, args.minScore)
@@ -23,7 +23,7 @@ class CliArgsTest {
     }
 
     @Test
-    fun liest_alle_optionalen_argumente() {
+    fun reads_all_optional_arguments() {
         val args = CliArgs.parse(
             arrayOf(
                 "--model", "hf:org/repo/best.onnx", "--image", "s.jpg",
@@ -40,35 +40,35 @@ class CliArgsTest {
     }
 
     @Test
-    fun fehlendes_model_wirft() {
+    fun missing_model_throws() {
         assertFailsWith<IllegalArgumentException> {
-            CliArgs.parse(arrayOf("--image", "seite.jpg"))
+            CliArgs.parse(arrayOf("--image", "page.jpg"))
         }
     }
 
     @Test
-    fun fehlendes_image_wirft() {
+    fun missing_image_throws() {
         assertFailsWith<IllegalArgumentException> {
             CliArgs.parse(arrayOf("--model", "best.onnx"))
         }
     }
 
     @Test
-    fun unbekanntes_argument_wirft() {
+    fun unknown_argument_throws() {
         assertFailsWith<IllegalArgumentException> {
             CliArgs.parse(arrayOf("--model", "m", "--image", "i", "--foo"))
         }
     }
 
     @Test
-    fun kaputte_zahl_wirft() {
+    fun malformed_number_throws() {
         assertFailsWith<IllegalArgumentException> {
             CliArgs.parse(arrayOf("--model", "m", "--image", "i", "--conf", "abc"))
         }
     }
 
     @Test
-    fun wertloses_flag_am_ende_wirft() {
+    fun valueless_flag_at_end_throws() {
         assertFailsWith<IllegalArgumentException> {
             CliArgs.parse(arrayOf("--model", "m", "--image"))
         }

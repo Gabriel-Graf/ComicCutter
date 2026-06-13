@@ -8,8 +8,8 @@ class Yolo11AdapterDecodeTest {
     private val lb = Letterbox.of(srcW = 200, srcH = 100, target = 1024)
 
     @Test
-    fun dekodiert_zentrums_box_in_seiten_pixel() {
-        // Eine Detektion: Modellraum-Mitte (512,512), w=5.12·20, h=5.12·10 → Seiten-Box [90,45,20,10].
+    fun decodes_center_box_into_page_pixels() {
+        // One detection: model-space center (512,512), w=5.12·20, h=5.12·10 → page box [90,45,20,10].
         val out = rows(cx = 512f, cy = 512f, w = 5.12f * 20, h = 5.12f * 10, score = 0.9f)
 
         val dets = Yolo11Adapter().decodeRows(out, lb)
@@ -25,8 +25,8 @@ class Yolo11AdapterDecodeTest {
     }
 
     @Test
-    fun verwirft_score_null_detektionen() {
-        // Zwei Spalten: erste score 0.8, zweite score 0 → nur die erste überlebt (Score>0-Guard).
+    fun discards_score_zero_detections() {
+        // Two columns: first score 0.8, second score 0 → only the first survives (score>0 guard).
         val out = arrayOf(
             floatArrayOf(512f, 512f),   // cx
             floatArrayOf(512f, 512f),   // cy
@@ -41,7 +41,7 @@ class Yolo11AdapterDecodeTest {
         assertEquals(0.8f, dets.first().score)
     }
 
-    /** Baut den YOLO11-Output `(5, 1)` für genau eine Detektion. */
+    /** Builds the YOLO11 output `(5, 1)` for exactly one detection. */
     private fun rows(cx: Float, cy: Float, w: Float, h: Float, score: Float): Array<FloatArray> =
         arrayOf(
             floatArrayOf(cx),

@@ -1,9 +1,9 @@
 package com.panela.comiccutter
 
 /**
- * Flutet das vom Seitenrand erreichbare Hintergrund-(Gutter-/Margin-)Netz.
- * Geseedet werden NUR helle Randpixel — dunkle Kanten (Full-Bleed-Panels) bleiben ungeflutet.
- * 4-Konnektivität. Reines Kotlin.
+ * Floods the background (gutter/margin) mesh reachable from the page edge.
+ * Only bright edge pixels are seeded — dark edges (full-bleed panels) stay unflooded.
+ * 4-connectivity. Pure Kotlin.
  */
 object GutterFill {
 

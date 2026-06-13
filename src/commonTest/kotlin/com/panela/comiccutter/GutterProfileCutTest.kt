@@ -7,10 +7,10 @@ import kotlin.test.assertTrue
 class GutterProfileCutTest {
 
     /**
-     * Seite mit [bg]-Hintergrund; jedes Panel wird mit deterministischem Schachbrett-Rauschen
-     * gefüllt (hohe Luminanz-Varianz = echte Art). Solide Füllung wäre ununterscheidbar von
-     * einem Gutter, daher das Muster. Die Mitteltöne (90/170) liegen bewusst zwischen Dunkel-
-     * und Hell-Gutter-Schwelle, damit der Content-Trim die Art als echten Bildinhalt erkennt.
+     * Page with a [bg] background; each panel is filled with deterministic checkerboard noise
+     * (high luminance variance = real artwork). A solid fill would be indistinguishable from
+     * a gutter, hence the pattern. The midtones (90/170) sit deliberately between the dark and
+     * light gutter thresholds so that the content trim recognizes the artwork as real image content.
      */
     private fun texturedPage(w: Int, h: Int, panels: List<PanelRect>, bg: Int): RenderedPage {
         val px = IntArray(w * h) { bg }
@@ -32,34 +32,34 @@ class GutterProfileCutTest {
         }
 
     @Test
-    fun `weiße Gutter trennen zwei nebeneinander liegende Panels`() {
+    fun `white gutters separate two side-by-side panels`() {
         val left = PanelRect(20, 20, 440, 760)
         val right = PanelRect(540, 20, 440, 760)
         val page = texturedPage(1000, 800, listOf(left, right), bg = 0xFFFFFFFF.toInt())
 
         val panels = GutterProfileCut.detect(page)
 
-        assertTrue(panels.size >= 2, "erwartet >=2 Panels, war ${panels.size}")
-        assertTrue(matches(panels, left), "linkes Panel nicht gefunden: $panels")
-        assertTrue(matches(panels, right), "rechtes Panel nicht gefunden: $panels")
+        assertTrue(panels.size >= 2, "expected >=2 panels, was ${panels.size}")
+        assertTrue(matches(panels, left), "left panel not found: $panels")
+        assertTrue(matches(panels, right), "right panel not found: $panels")
     }
 
     @Test
-    fun `dunkle Gutter (dunkel-auf-dunkel) trennen gestapelte Panels`() {
+    fun `dark gutters (dark-on-dark) separate stacked panels`() {
         val top = PanelRect(20, 20, 960, 360)
         val bottom = PanelRect(20, 440, 960, 340)
-        // Schwarzer Hintergrund = dunkle Gasse; Flood würde hier nichts trennen.
+        // Black background = dark gutter; a flood fill would separate nothing here.
         val page = texturedPage(1000, 800, listOf(top, bottom), bg = 0xFF050505.toInt())
 
         val panels = GutterProfileCut.detect(page)
 
-        assertTrue(panels.size >= 2, "erwartet >=2 Panels bei dunkler Gasse, war ${panels.size}")
-        assertTrue(matches(panels, top), "oberes Panel nicht gefunden: $panels")
-        assertTrue(matches(panels, bottom), "unteres Panel nicht gefunden: $panels")
+        assertTrue(panels.size >= 2, "expected >=2 panels with a dark gutter, was ${panels.size}")
+        assertTrue(matches(panels, top), "top panel not found: $panels")
+        assertTrue(matches(panels, bottom), "bottom panel not found: $panels")
     }
 
     @Test
-    fun `2x2-Grid wird rekursiv in vier Panels geschnitten`() {
+    fun `2x2 grid is cut recursively into four panels`() {
         val tl = PanelRect(20, 20, 440, 360)
         val tr = PanelRect(540, 20, 440, 360)
         val bl = PanelRect(20, 440, 440, 340)
@@ -68,30 +68,30 @@ class GutterProfileCutTest {
 
         val panels = GutterProfileCut.detect(page)
 
-        assertTrue(panels.size >= 4, "erwartet >=4 Panels (rekursiver Cut beider Achsen), war ${panels.size}")
-        listOf(tl, tr, bl, br).forEach { assertTrue(matches(panels, it), "Panel $it nicht gefunden: $panels") }
+        assertTrue(panels.size >= 4, "expected >=4 panels (recursive cut on both axes), was ${panels.size}")
+        listOf(tl, tr, bl, br).forEach { assertTrue(matches(panels, it), "panel $it not found: $panels") }
     }
 
     @Test
-    fun `kreuzende Sprechblase im Gutter verhindert die Trennung nicht`() {
+    fun `speech bubble crossing the gutter does not prevent separation`() {
         val left = PanelRect(20, 20, 440, 760)
         val right = PanelRect(540, 20, 440, 760)
-        // Sprechblase ragt über die Gasse (x 460..540) in einem schmalen Höhenband — die
-        // Kantendichte der Gutter-Spalten bleibt über die volle Höhe niedrig (tolerant).
+        // The speech bubble extends across the gutter (x 460..540) within a narrow height band — the
+        // edge density of the gutter columns stays low over the full height (tolerant).
         val bubble = PanelRect(460, 360, 80, 80)
         val page = texturedPage(1000, 800, listOf(left, right, bubble), bg = 0xFFFFFFFF.toInt())
 
         val panels = GutterProfileCut.detect(page)
 
-        // Entscheidend: trotz kreuzender Blase findet der Cut weiterhin zwei nebeneinander
-        // liegende Panels (die Blase darf die Trenngrenze verschieben, aber nicht aufheben).
-        assertTrue(panels.size >= 2, "kreuzende Blase verhinderte die Trennung: $panels")
-        assertTrue(panels.any { it.centerX < 500 }, "kein linkes Panel: $panels")
-        assertTrue(panels.any { it.centerX > 500 }, "kein rechtes Panel: $panels")
+        // The key point: despite the crossing bubble, the cut still finds two side-by-side
+        // panels (the bubble may shift the dividing line, but not remove it).
+        assertTrue(panels.size >= 2, "crossing bubble prevented separation: $panels")
+        assertTrue(panels.any { it.centerX < 500 }, "no left panel: $panels")
+        assertTrue(panels.any { it.centerX > 500 }, "no right panel: $panels")
     }
 
     @Test
-    fun `leere Seite liefert keine Panels`() {
+    fun `empty page returns no panels`() {
         val page = RenderedPage(400, 400, IntArray(400 * 400) { 0xFF808080.toInt() })
         assertTrue(GutterProfileCut.detect(page).isEmpty())
     }

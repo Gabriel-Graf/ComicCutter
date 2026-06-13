@@ -3,13 +3,13 @@ package com.panela.comiccutter
 import com.panela.comiccutter.model.RenderedPage
 
 /**
- * Erkennt Panels via Hybrid Flood-Fill + Connected-Components (reines Kotlin, host-testbar):
- * Otsu-Binarisierung → Edge-Seed-Gutter-Flood → Component-Bounding-Boxes → Filter/Merge →
- * Lesereihenfolge. Das weiße Gutter-Netz ist vom Seitenrand zusammenhängend, daher trennt die
- * Flutung Panels auch bei in die Gasse ragender Art (anders als der frühere XY-Cut).
+ * Detects panels via a hybrid flood-fill + connected-components approach (pure Kotlin, host-testable):
+ * Otsu binarization → edge-seed gutter flood → component bounding boxes → filter/merge →
+ * reading order. The white gutter mesh is connected from the page edge, so the flood separates panels
+ * even when art protrudes into the gutter (unlike the earlier XY-cut).
  *
- * @param minPanelAreaFraction  Boxen kleiner als dieser Seitenflächen-Anteil werden verworfen.
- * @param containmentFraction   Box gilt als „enthalten" wenn dieser Anteil ihrer Fläche in einer größeren liegt.
+ * @param minPanelAreaFraction  Boxes smaller than this fraction of the page area are discarded.
+ * @param containmentFraction   A box counts as "contained" if this fraction of its area lies within a larger one.
  */
 class PanelDetector(
     private val minPanelAreaFraction: Double = 0.01,
@@ -20,21 +20,21 @@ class PanelDetector(
     private val floodArbDelta: Int = 3,
 ) {
     private companion object {
-        /** Obergrenze für Flood-Rescue-Boxen; darüber zersplittert das Flood vermutlich einen Splash. */
+        /** Upper bound for flood-rescue boxes; above this the flood likely fragments a splash. */
         const val MAX_FLOOD_RESCUE = 5
 
-        /** Pearson-Korrelation beiderseits einer Kante, ab der zwei Kacheln als ein Panel verschmolzen werden. */
+        /** Pearson correlation on both sides of an edge at or above which two tiles are merged into one panel. */
         const val MERGE_SIM = 0.7
 
-        /** Seiten breiter als das werden vor der Erkennung herunterskaliert (Tuning- und Tempo-Punkt). */
+        /** Pages wider than this are downscaled before detection (tuning and performance point). */
         const val DETECTION_WIDTH = 1000
     }
 
     fun detect(page: RenderedPage, direction: ReadingDirection): List<PanelRect> {
         if (page.width <= 0 || page.height <= 0 || page.pixels.isEmpty()) return emptyList()
-        // Auf DETECTION_WIDTH herunterskalieren (nur verkleinern): Schwellwerte (Korn-Floor,
-        // Gutter-Breiten) sind auf ~1000px getunt; größere Eingaben verschieben sie und kosten unnötig
-        // Rechenzeit. Erkennung läuft auf der kleinen Kopie, die Boxen werden zurückskaliert.
+        // Downscale to DETECTION_WIDTH (shrink only): thresholds (noise floor, gutter widths) are
+        // tuned for ~1000px; larger inputs shift them and waste compute time. Detection runs on the
+        // small copy, and the boxes are scaled back up.
         val work = downscaled(page)
         val raw = detectSinglePage(work)
         val merged = if (mergeOverSplits) mergeBoxes(raw, work) else raw
@@ -43,14 +43,14 @@ class PanelDetector(
         return ReadingOrder.sort(result, direction)
     }
 
-    /** Flächenmittel-Downscale auf [DETECTION_WIDTH] Breite (aspect-erhaltend); kleinere Seiten unverändert. */
+    /** Area-average downscale to [DETECTION_WIDTH] width (aspect-preserving); smaller pages unchanged. */
     private fun downscaled(page: RenderedPage): RenderedPage {
         val sw = page.width
         if (sw <= DETECTION_WIDTH) return page
         val sh = page.height
         val tw = DETECTION_WIDTH
-        // Int-Arithmetik (kein Long): Kotlin/JS emuliert Long → in einer Pro-Pixel-Schleife extrem
-        // langsam. tx·sw / ty·sh bleiben für jede reale Seite < 2^31 (Breite/Höhe ≪ 2.1e9).
+        // Int arithmetic (no Long): Kotlin/JS emulates Long → extremely slow in a per-pixel loop.
+        // tx·sw / ty·sh stay < 2^31 for any real page (width/height ≪ 2.1e9).
         val th = (sh * tw / sw).coerceAtLeast(1)
         val src = page.pixels
         val out = IntArray(tw * th)
@@ -84,41 +84,42 @@ class PanelDetector(
     )
 
     /**
-     * Erkennt Panels einer einzelnen Seite (unsortiert). Primär der kombinierte Profil-XY-Cut
-     * ([GutterProfileCut]) — gegen Hand-GT messbar robuster als das Weißgutter-Flood, weil er weiße
-     * (auch von Blasen überbrückte) UND dunkle Gassen color-agnostisch trennt. Liefert er <2 Panels
-     * (echte full-bleed-Splash-Seite oder unteilbar), greift das Flood als Sicherheitsnetz.
+     * Detects the panels of a single page (unsorted). Primarily the combined profile XY-cut
+     * ([GutterProfileCut]) — measurably more robust against hand-annotated GT than the white-gutter
+     * flood, because it separates white (including bubble-bridged) AND dark gutters color-agnostically.
+     * If it yields <2 panels (a true full-bleed splash page or indivisible), the flood serves as a
+     * safety net.
      */
     private fun detectSinglePage(page: RenderedPage): List<PanelRect> {
         if (page.width <= 0 || page.height <= 0 || page.pixels.isEmpty()) return emptyList()
         val profile = gutterProfileDetect(page)
         if (profile.size >= 2) {
-            // Bordered dense grid: GPCs Voll-Breiten-Projektion unter-segmentiert, weil querende
-            // Panel-Rahmen jede Gutter-Zeile bimodal machen. Das Weißgutter-Flood folgt dagegen dem
-            // zusammenhängenden Netz und findet das Raster. Nur wenn GPC WENIG Panels lieferte und
-            // Flood DEUTLICH mehr (Schwelle), wird Flood bevorzugt — sonst bleibt GPC (Default-robust).
+            // Bordered dense grid: GPC's full-width projection under-segments, because crossing panel
+            // borders make every gutter row bimodal. The white-gutter flood, by contrast, follows the
+            // connected mesh and finds the grid. Only when GPC yielded FEW panels and the flood
+            // significantly MORE (threshold) is the flood preferred — otherwise GPC stays (robust by default).
             if (gpcFloodArbitration && profile.size <= floodArbMaxGpc) {
                 val flood = floodDetect(page)
                 if (flood.size >= profile.size + floodArbDelta) return flood
             }
             return profile
         }
-        // Profil fand keine Gasse (full-bleed-Splash ODER weiße Gassen, die der Projektion entgehen,
-        // weil Blasen/Text die Zeilen-/Spalten-Statistik stören). Das Weißgutter-Flood ist hier
-        // komplementär: bei einem echten Splash findet es ebenfalls nichts (1 Box), bei einem
-        // verpassten Mehr-Panel-Layout aber das vom Rand erreichbare Gutter-Netz.
+        // The profile found no gutter (full-bleed splash OR white gutters that escape the projection
+        // because bubbles/text disturb the row/column statistics). The white-gutter flood is
+        // complementary here: on a true splash it also finds nothing (1 box), but on a missed
+        // multi-panel layout it finds the gutter mesh reachable from the edge.
         val flood = floodDetect(page)
         if (flood.size in 2..MAX_FLOOD_RESCUE) return flood
-        // Sonst das Profil-Ergebnis behalten (1 Panel = Splash). Nur wenn das Profil GAR nichts fand
-        // (blanke/synthetische Fläche), liefert das Flood das einzelne Vollseiten-Panel.
+        // Otherwise keep the profile result (1 panel = splash). Only when the profile found NOTHING at
+        // all (blank/synthetic area) does the flood supply the single full-page panel.
         return profile.ifEmpty { flood }
     }
 
     /**
-     * Merge-Pass: verschmilzt benachbarte Kacheln, deren gemeinsame Kante Content-Kontinuität zeigt
-     * (dieselbe Szene läuft weiter = Over-Split an interner Struktur wie Stahlträger/Gebäudekante,
-     * KEIN echter Gutter). Über einen echten Gutter unterscheiden sich die zwei Szenen → niedrige
-     * Korrelation, bleibt getrennt. Gemessen gegen Hand-GT: Precision +~0.04 bei kleinem Recall-Preis.
+     * Merge pass: merges adjacent tiles whose shared edge shows content continuity (the same scene
+     * continues = over-split at internal structure such as a steel beam / building edge, NOT a real
+     * gutter). Across a real gutter the two scenes differ → low correlation, stays separated. Measured
+     * against hand-annotated GT: precision +~0.04 at a small recall cost.
      */
     private fun mergeBoxes(boxes: List<PanelRect>, page: RenderedPage): List<PanelRect> {
         if (boxes.size < 2) return boxes
@@ -141,7 +142,7 @@ class PanelDetector(
         return list
     }
 
-    /** Benachbart (gemeinsame Kante + ≥60% Überlappung) UND Content-kontinuierlich über die Kante. */
+    /** Adjacent (shared edge + ≥60% overlap) AND content-continuous across the edge. */
     private fun continuousNeighbours(a: PanelRect, b: PanelRect, lum: IntArray, w: Int, h: Int): Boolean {
         val gap = 10
         val yOv = overlapLen(a.y, a.y + a.height, b.y, b.y + b.height)
@@ -165,7 +166,7 @@ class PanelDetector(
         return false
     }
 
-    /** Pearson-Korrelation der mittleren Luminanz-Profile der [band] Pixel beiderseits der Kante. */
+    /** Pearson correlation of the mean luminance profiles of the [band] pixels on both sides of the edge. */
     private fun continuity(lum: IntArray, w: Int, h: Int, c: Int, lo: Int, hi: Int, vertical: Boolean, band: Int = 4): Double {
         val n = hi - lo
         if (n < 20) return 0.0
@@ -207,13 +208,13 @@ class PanelDetector(
     }
 
     /**
-     * Kombinierter Profil-XY-Cut. Die Guillotine-Kacheln sind konstruktionsbedingt disjunkt, daher
-     * KEINE Containment-Nachfilter (die würden hier nur valide Panels kosten — gemessen ~0.09 Recall).
+     * Combined profile XY-cut. The guillotine tiles are disjoint by construction, hence NO containment
+     * post-filter (it would only cost valid panels here — measured ~0.09 recall).
      */
     private fun gutterProfileDetect(page: RenderedPage): List<PanelRect> =
         GutterProfileCut.detect(page)
 
-    /** Weißgutter-Flood-Pfad (Edge-Seed-Flood → Komponenten → Rahmen-Split) inkl. Nachfilter. */
+    /** White-gutter flood path (edge-seed flood → components → border split) including post-filter. */
     private fun floodDetect(page: RenderedPage): List<PanelRect> {
         val threshold = ImageBinarization.otsuThreshold(page)
         val background = ImageBinarization.backgroundMask(page, threshold)
@@ -224,7 +225,7 @@ class PanelDetector(
         val filtered = regions.filter { it.width.toLong() * it.height >= minArea }
 
         val darkMask = BooleanArray(background.size) { !background[it] }
-        // Seitenüberspannende Komponenten (schwarze Rahmengitter ohne Weißgutter) aufteilen
+        // Split page-spanning components (black frame grids without a white gutter)
         val expanded = filtered.flatMap { box ->
             val wide = box.width > page.width * 0.6 && box.height > page.height * 0.5
             val bandlike = box.width > page.width * 0.85 || box.height > page.height * 0.85
@@ -234,7 +235,7 @@ class PanelDetector(
         return postFilter(sized, darkMask, page)
     }
 
-    /** Gemeinsame Nachfilter beider Pfade: solide Blobs, enthaltene Blasen, Überlappungen. */
+    /** Shared post-filter for both paths: solid blobs, contained bubbles, overlaps. */
     private fun postFilter(boxes: List<PanelRect>, dark: BooleanArray, page: RenderedPage): List<PanelRect> {
         val deSolid = dropSolidBlobs(boxes, dark, page.width, page.height)
         val deBubbled = dropContainedSmall(deSolid, page.width, page.height)
@@ -242,10 +243,10 @@ class PanelDetector(
     }
 
     /**
-     * Verwirft kleine, fast vollständig dunkle Boxen (Soundeffekt-Buchstaben wie „BLAM",
-     * solide Silhouetten) — die sind keine Panels. Echte (auch kleine) Panels haben helle
-     * Flächen/Sprechblasen, ihr Dunkelanteil bleibt unter [minDarkFill]. Flächen-gegatet
-     * ([maxAreaFraction]), damit nur kleine Blobs betroffen sind, nie ganze Panels.
+     * Discards small, almost entirely dark boxes (sound-effect letters like "BLAM", solid
+     * silhouettes) — those are not panels. Real (even small) panels have bright areas/speech bubbles,
+     * so their dark fraction stays below [minDarkFill]. Area-gated ([maxAreaFraction]) so that only
+     * small blobs are affected, never whole panels.
      */
     private fun dropSolidBlobs(
         boxes: List<PanelRect>, dark: BooleanArray, pageW: Int, pageH: Int,
@@ -264,8 +265,8 @@ class PanelDetector(
     }
 
     /**
-     * Verwirft kleine Boxen (< [smallAreaFraction] Seitenfläche), die vollständig in einer
-     * größeren liegen (Sprechblasen).
+     * Discards small boxes (< [smallAreaFraction] of the page area) that lie entirely within a larger
+     * one (speech bubbles).
      */
     private fun dropContainedSmall(
         boxes: List<PanelRect>, pageW: Int, pageH: Int, smallAreaFraction: Double = 0.06,
@@ -280,7 +281,7 @@ class PanelDetector(
         }
     }
 
-    /** Entfernt Boxen, die zu [containmentFraction] in einer anderen (größeren) liegen. */
+    /** Removes boxes that lie within another (larger) one by [containmentFraction]. */
     private fun dropContained(boxes: List<PanelRect>): List<PanelRect> {
         val bySize = boxes.sortedByDescending { it.width.toLong() * it.height }
         val kept = mutableListOf<PanelRect>()

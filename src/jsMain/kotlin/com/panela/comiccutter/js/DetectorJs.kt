@@ -5,11 +5,11 @@ import com.panela.comiccutter.ReadingDirection
 import com.panela.comiccutter.VERSION
 import com.panela.comiccutter.model.RenderedPage
 
-/** Die gebaute Lib-Version (= Release-Tag) — für die Demo-Anzeige. */
+/** The built library version (= release tag) — for the demo display. */
 @JsExport
 fun libVersion(): String = VERSION
 
-/** Ein erkanntes Panel in normalisierten Seiten-Koordinaten (0..1), 1-basierte Lesereihenfolge. */
+/** A detected panel in normalized page coordinates (0..1), 1-based reading order. */
 @JsExport
 class PanelJs(
     val left: Double,
@@ -20,9 +20,9 @@ class PanelJs(
 )
 
 /**
- * Browser-API: erkennt Panels einer Seite.
- * @param argb ARGB-Pixel (0xAARRGGBB), Länge width*height, zeilenweise. In JS ein Int32Array.
- * @param rtl true = Manga (rechts→links), false = Comic (links→rechts).
+ * Browser API: detects the panels of a page.
+ * @param argb ARGB pixels (0xAARRGGBB), length width*height, row by row. An Int32Array in JS.
+ * @param rtl true = manga (right-to-left), false = comic (left-to-right).
  */
 @JsExport
 fun detectPanels(width: Int, height: Int, argb: IntArray, rtl: Boolean): Array<PanelJs> {

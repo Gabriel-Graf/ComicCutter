@@ -12,7 +12,7 @@ class RegionLabelingTest {
     }
 
     @Test
-    fun `zwei nicht-geflutete Regionen ergeben zwei Boxen`() {
+    fun `two non-flooded regions yield two boxes`() {
         val (flooded, w, h) = mask(
             "##b##",
             "##b##",
@@ -25,7 +25,7 @@ class RegionLabelingTest {
     }
 
     @Test
-    fun `vollständig geflutet ergibt keine Box`() {
+    fun `fully flooded yields no box`() {
         val (flooded, w, h) = mask("bbb", "bbb")
         assertEquals(0, RegionLabeling.labelRegions(flooded, w, h).size)
     }

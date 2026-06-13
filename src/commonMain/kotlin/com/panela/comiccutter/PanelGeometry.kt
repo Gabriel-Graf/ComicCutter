@@ -1,6 +1,6 @@
 package com.panela.comiccutter
 
-/** Panel in bild-normalisierten Koordinaten [0..1] relativ zur Seite. */
+/** Panel in image-normalized coordinates [0..1] relative to the page. */
 data class NormRect(val left: Float, val top: Float, val width: Float, val height: Float) {
     val centerX: Float get() = left + width / 2f
     val centerY: Float get() = top + height / 2f
@@ -9,9 +9,9 @@ data class NormRect(val left: Float, val top: Float, val width: Float, val heigh
 }
 
 /**
- * Reine Geometrie für den Comic-Reader: Panel-Koordinaten normalisieren,
- * Tap-Treffer bestimmen, Zoom-Faktor berechnen. Kein Android, kein Viewport-Wissen —
- * die Compose-Schicht rechnet Viewport-Taps in bild-normalisierte Koordinaten um.
+ * Pure geometry for the comic reader: normalize panel coordinates,
+ * resolve tap hits, compute the zoom factor. No Android, no viewport knowledge —
+ * the Compose layer converts viewport taps into image-normalized coordinates.
  */
 object PanelGeometry {
 
@@ -23,24 +23,24 @@ object PanelGeometry {
             height = panel.height.toFloat() / pageH,
         )
 
-    /** Index des Panels, das den (normalisierten) Punkt enthält, sonst null (Gutter/Rand). */
+    /** Index of the panel that contains the (normalized) point, otherwise null (gutter/margin). */
     fun hitTest(xNorm: Float, yNorm: Float, panels: List<NormRect>): Int? {
         val i = panels.indexOfFirst { it.contains(xNorm, yNorm) }
         return if (i >= 0) i else null
     }
 
-    /** Größter normalisierter Flächenanteil (w*h) unter den Panels; 0 wenn leer. */
+    /** Largest normalized area fraction (w*h) among the panels; 0 if empty. */
     fun maxAreaFraction(panels: List<NormRect>): Float =
         panels.maxOfOrNull { it.width * it.height } ?: 0f
 
     /**
-     * Skalierungsfaktor, mit dem [panel] (bild-normalisiert) im Viewport bildschirmfüllend wird,
-     * unter Berücksichtigung des bei ContentScale.Fit dargestellten Content-Rechtecks
-     * ([contentW]x[contentH]) innerhalb des Viewports ([viewportW]x[viewportH]). Pivot = Panel-Mitte.
+     * Scale factor at which [panel] (image-normalized) fills the viewport, taking into account
+     * the content rectangle ([contentW]x[contentH]) shown under ContentScale.Fit within the
+     * viewport ([viewportW]x[viewportH]). Pivot = panel center.
      *
-     * **Contain** (`min(sx,sy)`): das ganze Panel bleibt sichtbar, es wird NIE beschnitten —
-     * der Zoom überragt das Panel nicht. Ein seiten-breites/-hohes Panel füllt seine limitierende
-     * Achse bereits, daher ist dort Faktor ≈ 1 das korrekte (Crop-freie) Maximum.
+     * **Contain** (`min(sx,sy)`): the whole panel stays visible, it is NEVER cropped —
+     * the zoom does not overshoot the panel. A page-wide/-tall panel already fills its limiting
+     * axis, so there a factor of ≈ 1 is the correct (crop-free) maximum.
      */
     fun fitScale(
         panel: NormRect,

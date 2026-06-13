@@ -1,8 +1,8 @@
 package com.panela.comiccutter
 
 /**
- * Sortiert Panel-Boxen in Lesereihenfolge: in Zeilen-Bänder gruppieren (vertikale Überlappung
- * mit dem aktuellen Band), Bänder oben→unten, je Band links→rechts (LTR) bzw. rechts→links (RTL).
+ * Sorts panel boxes into reading order: group into row bands (vertical overlap
+ * with the current band), bands top-to-bottom, within each band left-to-right (LTR) or right-to-left (RTL).
  */
 object ReadingOrder {
 
@@ -20,7 +20,7 @@ object ReadingOrder {
         }
     }
 
-    /** true, wenn [b] vertikal hinreichend mit dem bisherigen Band überlappt (gleiche Zeile). */
+    /** true if [b] overlaps the current band sufficiently in the vertical direction (same row). */
     private fun overlapsRow(row: List<PanelRect>, b: PanelRect): Boolean {
         val top = row.minOf { it.y }
         val bottom = row.maxOf { it.y + it.height }

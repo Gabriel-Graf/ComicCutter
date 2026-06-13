@@ -5,7 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class MlPanelSourceTest {
-    /** Fake-Runner: liefert feste Detektionen, ignoriert Pixel — testet das Mapping ohne Modell. */
+    /** Fake runner: returns fixed detections, ignores pixels — tests the mapping without a model. */
     private class FakeRunner(val out: List<RawDetection>) : ModelRunner {
         override fun infer(page: RenderedPage): List<RawDetection> = out
     }
@@ -13,7 +13,7 @@ class MlPanelSourceTest {
     private val page = RenderedPage(100, 100, IntArray(100 * 100))
 
     @Test
-    fun mappt_runner_output_durch_filter_auf_panelrects() {
+    fun maps_runner_output_through_filter_to_panelrects() {
         val runner = FakeRunner(
             listOf(
                 RawDetection(10, 10, 30, 30, 0.9f, 0),

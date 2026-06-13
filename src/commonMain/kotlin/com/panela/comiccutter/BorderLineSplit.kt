@@ -1,28 +1,28 @@
 package com.panela.comiccutter
 
 /**
- * Teilt eine Region rekursiv an schmalen, durchgehenden DUNKLEN achsenparallelen Rahmenlinien auf,
- * die von helleren Bändern umgeben sind — trennt also schwarzumrandete / berührende Panels,
- * ohne gleichmäßig dunkle Zeichenflächen zu zersplittern.
+ * Recursively splits a region along narrow, continuous DARK axis-aligned border lines that are
+ * surrounded by brighter bands — i.e. separates black-bordered / touching panels without
+ * fragmenting uniformly dark art areas.
  *
- * Schlüsselinvariante: Eine Bandkandidatin ist nur gültig, wenn die Nachbarzeilen/-spalten
- * AUSSERHALB des Bandes signifikant heller sind (darkFraction ≤ neighborMaxFraction). Das
- * verhindert, dass uniforme schwarze Flächen als Rahmenlinien erkannt werden.
+ * Key invariant: A band candidate is only valid if the neighboring rows/columns OUTSIDE the band
+ * are significantly brighter (darkFraction ≤ neighborMaxFraction). This prevents uniform black
+ * areas from being detected as border lines.
  */
 object BorderLineSplit {
 
     /**
-     * Spaltet [box] rekursiv an achsenparallelen Rahmenlinien auf.
+     * Recursively splits [box] along axis-aligned border lines.
      *
-     * @param dark                 Binärmaske: true = dunkles/Tinten-Pixel
-     * @param width                Gesamtbreite des Bildes
-     * @param height               Gesamthöhe des Bildes
-     * @param box                  Zu untersuchende Region
-     * @param lineDarkFraction     Mindest-Dunkelanteil einer Zeile/Spalte um als Linie zu gelten
-     * @param neighborMaxFraction  Maximal erlaubter Dunkelanteil der Nachbarbänder (Kontextbedingung)
-     * @param maxLineThickness     Maximale Dicke eines Linienbandes in Pixeln
-     * @param minPanel             Minimale Panel-Größe (in der Schnittachse) nach dem Split
-     * @param maxDepth             Maximale Rekursionstiefe
+     * @param dark                 Binary mask: true = dark/ink pixel
+     * @param width                Total image width
+     * @param height               Total image height
+     * @param box                  Region to examine
+     * @param lineDarkFraction     Minimum dark fraction of a row/column to count as a line
+     * @param neighborMaxFraction  Maximum allowed dark fraction of the neighboring bands (context condition)
+     * @param maxLineThickness     Maximum thickness of a line band in pixels
+     * @param minPanel             Minimum panel size (along the cut axis) after the split
+     * @param maxDepth             Maximum recursion depth
      */
     fun split(
         dark: BooleanArray,
@@ -40,7 +40,7 @@ object BorderLineSplit {
         val hBand = findBestHorizontalBand(dark, width, height, box, lineDarkFraction, neighborMaxFraction, maxLineThickness, minPanel)
         val vBand = findBestVerticalBand(dark, width, height, box, lineDarkFraction, neighborMaxFraction, maxLineThickness, minPanel)
 
-        // Wähle den stärkeren Schnitt (höhere mittlere Dunkelheit)
+        // Pick the stronger cut (higher mean darkness)
         val cut: CutBand? = when {
             hBand == null && vBand == null -> null
             hBand == null -> vBand
@@ -52,7 +52,7 @@ object BorderLineSplit {
         if (cut == null) return listOf(box)
 
         return if (cut.horizontal) {
-            // Horizontaler Schnitt: obere Box + untere Box, Band ausgeschlossen
+            // Horizontal cut: top box + bottom box, band excluded
             val topHeight = cut.start - box.y
             val bottomY = cut.endExcl
             val bottomHeight = box.y + box.height - bottomY
@@ -62,7 +62,7 @@ object BorderLineSplit {
             split(dark, width, height, top, lineDarkFraction, neighborMaxFraction, maxLineThickness, minPanel, maxDepth - 1) +
                 split(dark, width, height, bottom, lineDarkFraction, neighborMaxFraction, maxLineThickness, minPanel, maxDepth - 1)
         } else {
-            // Vertikaler Schnitt: linke Box + rechte Box, Band ausgeschlossen
+            // Vertical cut: left box + right box, band excluded
             val leftWidth = cut.start - box.x
             val rightX = cut.endExcl
             val rightWidth = box.x + box.width - rightX
@@ -74,20 +74,20 @@ object BorderLineSplit {
         }
     }
 
-    // ── Interne Datenklasse für ein gefundenes Linienband ─────────────────────────────────────
+    // ── Internal data class for a found line band ─────────────────────────────────────────────
 
     private data class CutBand(
-        val start: Int,       // erster Zeilenindex (inkl.) des Bandes
-        val endExcl: Int,     // erster Index nach dem Band (exkl.)
-        val score: Double,    // mittlere Dunkelheit des Bandes (höher = besser)
+        val start: Int,       // first row index (inclusive) of the band
+        val endExcl: Int,     // first index after the band (exclusive)
+        val score: Double,    // mean darkness of the band (higher = better)
         val horizontal: Boolean,
     )
 
-    // ── Horizontale Bandsuche ─────────────────────────────────────────────────────────────────
+    // ── Horizontal band search ────────────────────────────────────────────────────────────────
 
     /**
-     * Sucht das beste horizontale Rahmenlinienband innerhalb von [box].
-     * „Innen" bedeutet: Band liegt mindestens [minPanel] Pixel vom oberen und unteren Rand entfernt.
+     * Finds the best horizontal border line band within [box].
+     * "Interior" means: the band lies at least [minPanel] pixels from the top and bottom edge.
      */
     private fun findBestHorizontalBand(
         dark: BooleanArray,
@@ -100,11 +100,11 @@ object BorderLineSplit {
         minPanel: Int,
     ): CutBand? {
         val yInnerStart = box.y + minPanel
-        val yInnerEnd = box.y + box.height - minPanel  // exklusiv: Band darf nicht hier beginnen
+        val yInnerEnd = box.y + box.height - minPanel  // exclusive: band may not start here
 
         if (yInnerStart >= yInnerEnd) return null
 
-        // Berechne Dunkelanteil für alle Zeilen im Box-Bereich
+        // Compute dark fraction for all rows in the box range
         val fractions = DoubleArray(box.height) { i ->
             darkFractionRow(dark, width, height, box, box.y + i)
         }
@@ -115,7 +115,7 @@ object BorderLineSplit {
         while (y < yInnerEnd) {
             val localY = y - box.y
             if (fractions[localY] >= lineDarkFraction) {
-                // Bandstart gefunden — wie weit reicht es?
+                // Band start found — how far does it extend?
                 var bandEnd = y + 1
                 while (bandEnd < yInnerEnd + maxLineThickness && bandEnd < box.y + box.height &&
                     fractions[bandEnd - box.y] >= lineDarkFraction
@@ -124,7 +124,7 @@ object BorderLineSplit {
                 }
                 val thickness = bandEnd - y
                 if (thickness <= maxLineThickness) {
-                    // Prüfe Nachbarbänder (außerhalb des Bandes, innerhalb der Box)
+                    // Check the neighboring bands (outside the band, inside the box)
                     val neighborAbove = neighborFractionAbove(fractions, box, y, neighborRows = 3)
                     val neighborBelow = neighborFractionBelow(fractions, box, bandEnd, neighborRows = 3)
                     if (neighborAbove <= neighborMaxFraction && neighborBelow <= neighborMaxFraction) {
@@ -134,7 +134,7 @@ object BorderLineSplit {
                         }
                     }
                 }
-                // Springe ans Bandende weiter
+                // Jump ahead to the band end
                 y = bandEnd
             } else {
                 y++
@@ -143,11 +143,11 @@ object BorderLineSplit {
         return bestBand
     }
 
-    // ── Vertikale Bandsuche ───────────────────────────────────────────────────────────────────
+    // ── Vertical band search ──────────────────────────────────────────────────────────────────
 
     /**
-     * Sucht das beste vertikale Rahmenlinienband innerhalb von [box].
-     * „Innen" bedeutet: Band liegt mindestens [minPanel] Pixel vom linken und rechten Rand entfernt.
+     * Finds the best vertical border line band within [box].
+     * "Interior" means: the band lies at least [minPanel] pixels from the left and right edge.
      */
     private fun findBestVerticalBand(
         dark: BooleanArray,
@@ -199,9 +199,9 @@ object BorderLineSplit {
         return bestBand
     }
 
-    // ── Nachbar-Dunkelheit-Helfer ─────────────────────────────────────────────────────────────
+    // ── Neighbor-darkness helpers ─────────────────────────────────────────────────────────────
 
-    /** Mittlere Dunkelheit der [neighborRows] Zeilen direkt ÜBER dem Band (relativ zur Box). */
+    /** Mean darkness of the [neighborRows] rows directly ABOVE the band (relative to the box). */
     private fun neighborFractionAbove(fractions: DoubleArray, box: PanelRect, bandStartAbs: Int, neighborRows: Int): Double {
         val localStart = bandStartAbs - box.y
         if (localStart <= 0) return 0.0
@@ -209,7 +209,7 @@ object BorderLineSplit {
         return fractions.copyOfRange(from, localStart).average()
     }
 
-    /** Mittlere Dunkelheit der [neighborRows] Zeilen direkt UNTER dem Band. */
+    /** Mean darkness of the [neighborRows] rows directly BELOW the band. */
     private fun neighborFractionBelow(fractions: DoubleArray, box: PanelRect, bandEndAbs: Int, neighborRows: Int): Double {
         val localEnd = bandEndAbs - box.y
         if (localEnd >= fractions.size) return 0.0
@@ -217,7 +217,7 @@ object BorderLineSplit {
         return fractions.copyOfRange(localEnd, to).average()
     }
 
-    /** Mittlere Dunkelheit der [neighborCols] Spalten direkt LINKS vom Band. */
+    /** Mean darkness of the [neighborCols] columns directly LEFT of the band. */
     private fun neighborFractionLeft(fractions: DoubleArray, box: PanelRect, bandStartAbs: Int, neighborCols: Int): Double {
         val localStart = bandStartAbs - box.x
         if (localStart <= 0) return 0.0
@@ -225,7 +225,7 @@ object BorderLineSplit {
         return fractions.copyOfRange(from, localStart).average()
     }
 
-    /** Mittlere Dunkelheit der [neighborCols] Spalten direkt RECHTS vom Band. */
+    /** Mean darkness of the [neighborCols] columns directly RIGHT of the band. */
     private fun neighborFractionRight(fractions: DoubleArray, box: PanelRect, bandEndAbs: Int, neighborCols: Int): Double {
         val localEnd = bandEndAbs - box.x
         if (localEnd >= fractions.size) return 0.0
@@ -233,7 +233,7 @@ object BorderLineSplit {
         return fractions.copyOfRange(localEnd, to).average()
     }
 
-    // ── Pixel-Dichte-Helfer (vom Spec vorgegeben) ────────────────────────────────────────────
+    // ── Pixel-density helpers (mandated by the spec) ──────────────────────────────────────────
 
     private fun darkFractionRow(dark: BooleanArray, width: Int, height: Int, box: PanelRect, y: Int): Double {
         if (y < 0 || y >= height) return 0.0

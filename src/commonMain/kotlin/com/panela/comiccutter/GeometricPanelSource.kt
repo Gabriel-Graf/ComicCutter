@@ -2,7 +2,7 @@ package com.panela.comiccutter
 
 import com.panela.comiccutter.model.RenderedPage
 
-/** [PanelSource] auf Basis des geometrischen [PanelDetector]. Comics: links→rechts. */
+/** [PanelSource] based on the geometric [PanelDetector]. Comics: left-to-right. */
 class GeometricPanelSource(
     private val detector: PanelDetector = PanelDetector(),
 ) : PanelSource {

@@ -2,14 +2,14 @@ package com.panela.comiccutter
 
 import com.panela.comiccutter.model.RenderedPage
 
-/** Baut synthetische Comicseiten als RenderedPage für Detektor-Tests. */
+/** Builds synthetic comic pages as RenderedPage for detector tests. */
 object SyntheticPage {
     private const val WHITE = 0xFFFFFFFF.toInt()
     private const val BLACK = 0xFF101010.toInt()
 
     /**
-     * Weiße Seite [w]x[h]; jedes Rechteck in [panels] wird dunkel gefüllt (Panel-Inhalt).
-     * [holes] werden danach wieder weiß gefüllt (z. B. Sprechblasen-Inseln).
+     * White page [w]x[h]; each rectangle in [panels] is filled dark (panel content).
+     * [holes] are then filled white again (e.g. speech-bubble islands).
      */
     fun of(w: Int, h: Int, panels: List<PanelRect>, holes: List<PanelRect> = emptyList(), bg: Int = 0xFFFFFFFF.toInt()): RenderedPage {
         val px = IntArray(w * h) { bg }

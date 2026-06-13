@@ -6,22 +6,22 @@ import kotlin.test.assertTrue
 
 class DetectorJsTest {
 
-    /** Zwei texturierte Kacheln (links/rechts) auf weißem Grund mit heller Mittelgasse. */
+    /** Two textured tiles (left/right) on a white background with a bright central gutter. */
     private fun twoPanelArgb(w: Int, h: Int): IntArray {
-        val px = IntArray(w * h) { 0xFFFFFFFF.toInt() } // weiß = Gutter
+        val px = IntArray(w * h) { 0xFFFFFFFF.toInt() } // white = gutter
         fun fill(x0: Int, x1: Int) {
             for (y in 20 until h - 20) for (x in x0 until x1) {
                 val on = (x / 4 + y / 4) % 2 == 0
                 px[y * w + x] = if (on) 0xFF5A5A5A.toInt() else 0xFFAAAAAA.toInt()
             }
         }
-        fill(20, w / 2 - 30)        // linke Kachel
-        fill(w / 2 + 30, w - 20)    // rechte Kachel
+        fill(20, w / 2 - 30)        // left tile
+        fill(w / 2 + 30, w - 20)    // right tile
         return px
     }
 
     @Test
-    fun detektiert_zwei_panels_in_LTR_reihenfolge() {
+    fun detects_two_panels_in_LTR_order() {
         val w = 1000; val h = 800
         val panels = detectPanels(w, h, twoPanelArgb(w, h), rtl = false)
 
@@ -33,7 +33,7 @@ class DetectorJsTest {
     }
 
     @Test
-    fun rtl_dreht_die_reihenfolge() {
+    fun rtl_reverses_the_order() {
         val w = 1000; val h = 800
         val panels = detectPanels(w, h, twoPanelArgb(w, h), rtl = true)
         val first = panels.first { it.order == 1 }

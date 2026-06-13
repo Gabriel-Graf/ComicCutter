@@ -5,10 +5,11 @@ import com.panela.comiccutter.RawDetection
 import com.panela.comiccutter.model.RenderedPage
 
 /**
- * [OnnxAdapter] für ein YOLO11 single-class Panel-Modell mit Output-Head `(1, 4+nc, N)`
- * (nc=1 → `(1,5,N)`: Zeilen cx,cy,w,h,score). Input `(1,3,size,size)`, RGB, `/255`, NCHW,
- * aspect-erhaltendes Letterbox mit Pad-Farbe 114. Spiegelt die Referenz-`adapter.py`
- * (Parity-Test bestätigt IoU ≥ 0.95). conf-Threshold und NMS macht der `MlFilter`, nicht hier.
+ * [OnnxAdapter] for a YOLO11 single-class panel model with output head `(1, 4+nc, N)`
+ * (nc=1 → `(1,5,N)`: rows cx,cy,w,h,score). Input `(1,3,size,size)`, RGB, `/255`, NCHW,
+ * aspect-preserving letterbox with pad color 114. Mirrors the reference `adapter.py`
+ * (parity test confirms IoU ≥ 0.95). The conf threshold and NMS are done by the `MlFilter`,
+ * not here.
  */
 class Yolo11Adapter(override val inputSize: Int = 1024) : OnnxAdapter {
 
@@ -22,7 +23,7 @@ class Yolo11Adapter(override val inputSize: Int = 1024) : OnnxAdapter {
         return decodeRows(out, lb)
     }
 
-    /** Output-Zeilen `(5, N)` → rohe Pixel-Boxen. Score>0-Guard; alles Weitere macht der MlFilter. */
+    /** Output rows `(5, N)` → raw pixel boxes. Score>0 guard; everything else is up to the MlFilter. */
     internal fun decodeRows(out: Array<FloatArray>, lb: Letterbox): List<RawDetection> {
         val n = out[0].size
         val dets = ArrayList<RawDetection>(n)
@@ -35,7 +36,7 @@ class Yolo11Adapter(override val inputSize: Int = 1024) : OnnxAdapter {
         return dets
     }
 
-    /** Seite → CHW-Float [3·size·size], RGB 0..1, aspect-erhaltend mit grauem Padding (114/255). */
+    /** Page → CHW float [3·size·size], RGB 0..1, aspect-preserving with gray padding (114/255). */
     private fun renderLetterboxCHW(page: RenderedPage, lb: Letterbox): FloatArray {
         val size = inputSize
         val plane = size * size

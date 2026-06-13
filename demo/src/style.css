@@ -5,7 +5,7 @@
 * { box-sizing: border-box; }
 body {
   margin:0; color:var(--text); font-family:system-ui,-apple-system,sans-serif;
-  /* dezenter Akzent-Schein oben für Tiefe statt flachem Schwarz */
+  /* subtle accent glow at the top for depth instead of flat black */
   background:radial-gradient(1100px 460px at 50% -8%, rgba(45,125,255,.08), transparent 70%), var(--bg);
 }
 
@@ -14,14 +14,14 @@ body {
 h1 { font-size:20px; letter-spacing:.02em; margin:0 0 4px; }
 .lead { color:var(--muted); font-size:14px; margin:0; }
 
-/* Lib-Version (= deployter Release-Tag) — monospace Akzent-Pill neben dem Titel */
+/* Library version (= deployed release tag) — monospace accent pill next to the title */
 .ver {
   font:600 12px/1 ui-monospace,monospace; color:var(--accent); letter-spacing:.02em;
   background:rgba(45,125,255,.1); border:1px solid rgba(45,125,255,.32); border-radius:999px;
   padding:3px 8px; vertical-align:middle; position:relative; top:-2px;
 }
 
-/* ── Toolbar: ein zusammenhängendes „Control-Panel" statt loser Controls ──── */
+/* ── Toolbar: one cohesive "control panel" instead of loose controls ──────── */
 .toolbar {
   display:inline-flex; align-items:center; gap:2px; flex-wrap:wrap; justify-content:center;
   margin:0 0 16px; padding:6px; border-radius:12px;
@@ -85,7 +85,7 @@ h1 { font-size:20px; letter-spacing:.02em; margin:0 0 4px; }
 }
 .dd-option.current .dd-num { color:#6ea8ff; border-color:rgba(45,125,255,.4); }
 .dd-text { flex:1; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-/* ── Custom toggle switch (kein nativer Checkbox-Look) ────────────────────── */
+/* ── Custom toggle switch (no native checkbox look) ───────────────────────── */
 .tb-switch { display:inline-flex; align-items:center; gap:9px; padding:0 8px; font-size:13px; color:var(--text); cursor:pointer; user-select:none; }
 .tb-switch input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
 .tb-track {
@@ -103,7 +103,7 @@ h1 { font-size:20px; letter-spacing:.02em; margin:0 0 4px; }
 .tb-switch-label { color:var(--muted); transition:color .2s; }
 .tb-switch input:checked ~ .tb-switch-label { color:var(--text); }
 
-/* ── Panel-Count als Monospace-Chip mit Status-Punkt ─────────────────────── */
+/* ── Panel count as a monospace chip with a status dot ────────────────────── */
 .tb-count {
   display:inline-flex; align-items:center; gap:8px; padding:0 12px 0 10px; min-width:96px;
   font:600 12px/1 ui-monospace,monospace; color:var(--muted); letter-spacing:.01em;

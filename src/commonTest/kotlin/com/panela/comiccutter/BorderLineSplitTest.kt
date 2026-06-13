@@ -14,7 +14,7 @@ class BorderLineSplitTest {
     private fun full(w: Int, h: Int) = PanelRect(0, 0, w, h)
 
     @Test
-    fun `zwei durch dunkle Querlinie getrennte helle Felder ergeben zwei`() {
+    fun `two light fields separated by a dark horizontal line yield two`() {
         val rows = Array(9) { y -> if (y == 4) "##########" else ".........." }
         val (m, w, h) = mask(*rows)
         val out = BorderLineSplit.split(m, w, h, full(w, h), minPanel = 2)
@@ -23,21 +23,21 @@ class BorderLineSplitTest {
     }
 
     @Test
-    fun `kein klarer Strich ergibt unverändert ein Feld`() {
+    fun `no clear line yields a single field unchanged`() {
         val rows = Array(9) { ".".repeat(10) }
         val (m, w, h) = mask(*rows)
         assertEquals(1, BorderLineSplit.split(m, w, h, full(w, h), minPanel = 2).size)
     }
 
     @Test
-    fun `uniform dunkle Region wird NICHT zersplittet`() {
+    fun `uniformly dark region is NOT split apart`() {
         val rows = Array(9) { "#".repeat(10) }
         val (m, w, h) = mask(*rows)
         assertEquals(1, BorderLineSplit.split(m, w, h, full(w, h), minPanel = 2).size)
     }
 
     @Test
-    fun `2x2 schwarz-umrandet ohne Weissgutter ergibt vier`() {
+    fun `2x2 black-bordered without white gutter yields four`() {
         val rows = Array(9) { y ->
             buildString { for (x in 0 until 11) append(if (y == 4 || x == 5) '#' else '.') }
         }

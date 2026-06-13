@@ -18,9 +18,9 @@ import javax.imageio.ImageIO
 import kotlin.system.exitProcess
 
 /**
- * CLI-Einstieg: ein ONNX-Modell (lokal | hf: | https) gegen ein Bild laufen lassen und die
- * Panels als JSON ausgeben — offline-fähig, ohne Python. Die reine Argument-/URL-Logik liegt
- * in [CliArgs] bzw. [ModelLocator]; hier passiert nur IO (Modell laden, Bild lesen, PNG schreiben).
+ * CLI entry point: run an ONNX model (local | hf: | https) against an image and print the panels
+ * as JSON — offline-capable, without Python. The pure argument/URL logic lives in [CliArgs] and
+ * [ModelLocator] respectively; here only IO happens (load model, read image, write PNG).
  */
 object Main {
 
@@ -29,7 +29,7 @@ object Main {
         val args = try {
             CliArgs.parse(rawArgs)
         } catch (e: IllegalArgumentException) {
-            System.err.println("Fehler: ${e.message}\n\n${CliArgs.USAGE}")
+            System.err.println("Error: ${e.message}\n\n${CliArgs.USAGE}")
             exitProcess(1)
         }
 
@@ -48,15 +48,15 @@ object Main {
         args.overlay?.let { writeOverlay(File(args.image), panels, File(it)) }
     }
 
-    /** Geordnete Panels → JSON-Array `[{order,x,y,width,height}, …]` in Seiten-Pixel-Koordinaten. */
+    /** Ordered panels → JSON array `[{order,x,y,width,height}, …]` in page-pixel coordinates. */
     private fun toJson(panels: List<PanelRect>): String =
         panels.mapIndexed { i, p ->
             """{"order":${i + 1},"x":${p.x},"y":${p.y},"width":${p.width},"height":${p.height}}"""
         }.joinToString(prefix = "[", postfix = "]", separator = ",")
 
     private fun loadPage(file: File): RenderedPage {
-        require(file.isFile) { "Bild nicht gefunden: ${file.path}" }
-        val img = ImageIO.read(file) ?: error("Bild nicht lesbar: ${file.path}")
+        require(file.isFile) { "Image not found: ${file.path}" }
+        val img = ImageIO.read(file) ?: error("Image not readable: ${file.path}")
         val w = img.width
         val h = img.height
         val px = IntArray(w * h)
@@ -64,9 +64,9 @@ object Main {
         return RenderedPage(w, h, px)
     }
 
-    /** Quellbild kopieren, nummerierte Boxen einzeichnen, als PNG schreiben. */
+    /** Copy the source image, draw numbered boxes, write it as PNG. */
     private fun writeOverlay(source: File, panels: List<PanelRect>, target: File) {
-        val src = ImageIO.read(source) ?: error("Bild nicht lesbar: ${source.path}")
+        val src = ImageIO.read(source) ?: error("Image not readable: ${source.path}")
         val canvas = BufferedImage(src.width, src.height, BufferedImage.TYPE_INT_RGB)
         val g = canvas.createGraphics()
         g.drawImage(src, 0, 0, null)
@@ -79,6 +79,6 @@ object Main {
         }
         g.dispose()
         ImageIO.write(canvas, "png", target)
-        System.err.println("Overlay geschrieben: ${target.path}")
+        System.err.println("Overlay written: ${target.path}")
     }
 }

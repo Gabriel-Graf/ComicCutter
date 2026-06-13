@@ -2,10 +2,10 @@ package com.panela.comiccutter
 
 import com.panela.comiccutter.model.RenderedPage
 
-/** Binarisierung einer Seite: Luminanz + adaptive Otsu-Schwelle → Hintergrund-Maske. Reines Kotlin. */
+/** Binarization of a page: luminance + adaptive Otsu threshold → background mask. Pure Kotlin. */
 object ImageBinarization {
 
-    /** Wahrgenommene Helligkeit 0..255 aus einem ARGB-Pixel (Rec. 601). */
+    /** Perceived brightness 0..255 from an ARGB pixel (Rec. 601). */
     fun luminance(argb: Int): Int {
         val r = (argb shr 16) and 0xFF
         val g = (argb shr 8) and 0xFF
@@ -13,7 +13,7 @@ object ImageBinarization {
         return (r * 299 + g * 587 + b * 114) / 1000
     }
 
-    /** Otsu-Schwelle: maximiert die Inter-Klassen-Varianz über das Luminanz-Histogramm. */
+    /** Otsu threshold: maximizes inter-class variance over the luminance histogram. */
     fun otsuThreshold(page: RenderedPage): Int {
         val hist = IntArray(256)
         for (p in page.pixels) hist[luminance(p)]++
@@ -39,7 +39,7 @@ object ImageBinarization {
         return threshold
     }
 
-    /** true = Hintergrund (Luminanz > [threshold]). */
+    /** true = background (luminance > [threshold]). */
     fun backgroundMask(page: RenderedPage, threshold: Int): BooleanArray =
         BooleanArray(page.pixels.size) { luminance(page.pixels[it]) > threshold }
 }

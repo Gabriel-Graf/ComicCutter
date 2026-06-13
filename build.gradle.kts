@@ -3,15 +3,15 @@ plugins {
     `maven-publish`
 }
 
-// io.github.<github-user> ist der von Sonatype auto-verifizierte Namespace.
-// Bei JitPack wird die group durch com.github.<user> ersetzt — dort egal.
+// io.github.<github-user> is the namespace auto-verified by Sonatype.
+// On JitPack the group is replaced by com.github.<user> — irrelevant there.
 group = "io.github.gabriel-graf"
 version = "0.3.1"
 
 repositories { mavenCentral() }
 
-// Generiert eine Version.kt aus der Gradle-`version` (Single Source of Truth) — nach JS exportiert,
-// damit die Demo den tatsächlich gebauten Release-Tag anzeigen kann.
+// Generates a Version.kt from the Gradle `version` (single source of truth) — exported to JS,
+// so the demo can show the actually built release tag.
 val generateVersionFile by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/version/kotlin")
     val versionValue = project.version.toString()
@@ -22,7 +22,7 @@ val generateVersionFile by tasks.registering {
         pkg.mkdirs()
         pkg.resolve("Version.kt").writeText(
             "package com.panela.comiccutter\n\n" +
-                "/** Lib-Version (= Git-Release-Tag), generiert aus der Gradle-`version`. */\n" +
+                "/** Library version (= Git release tag), generated from the Gradle `version`. */\n" +
                 "public const val VERSION: String = \"$versionValue\"\n",
         )
     }
@@ -45,7 +45,7 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
-        // @JsExport ist in Kotlin 2.1 noch experimentell — Opt-in nur für die JS-Quellsets.
+        // @JsExport is still experimental in Kotlin 2.1 — opt in only for the JS source sets.
         jsMain { languageSettings.optIn("kotlin.js.ExperimentalJsExport") }
         jsTest { languageSettings.optIn("kotlin.js.ExperimentalJsExport") }
     }
@@ -56,8 +56,8 @@ publishing {
         pom {
             name.set("GuidedComic — Comic-Cutter")
             description.set(
-                "Reiner-Kotlin Comic-Panel-Detektor (Profil-XY-Cut + Flood-Fallback) " +
-                    "mit Lesereihenfolge und geführter Navigation. Host-unabhängig, kein AWT."
+                "Pure-Kotlin comic panel detector (profile XY-cut + flood fallback) " +
+                    "with reading order and guided navigation. Host-independent, no AWT."
             )
             url.set("https://github.com/Gabriel-Graf/ComicCutter")
             licenses {

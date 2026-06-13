@@ -8,30 +8,30 @@ import java.net.http.HttpResponse
 import kotlin.math.absoluteValue
 
 /**
- * Löst eine Modell-Spec zu Bytes auf — offline-first. Drei Formen:
+ * Resolves a model spec to bytes — offline-first. Three forms:
  *
- * - **lokaler Pfad** (`/pfad/best.onnx`, `~/...`): direkt gelesen, kein Netz.
- * - **`hf:org/repo/datei.onnx`** (optional `org/repo@revision/...`): Hugging-Face-Resolve-URL.
- * - **`http(s)://...`**: direkter Download.
+ * - **local path** (`/path/best.onnx`, `~/...`): read directly, no network.
+ * - **`hf:org/repo/file.onnx`** (optionally `org/repo@revision/...`): Hugging Face resolve URL.
+ * - **`http(s)://...`**: direct download.
  *
- * Heruntergeladene Modelle werden in `~/.cache/comic-cutter-onnx/` gecacht (Key = URL-Hash +
- * Dateiname), sodass ein zweiter Lauf offline funktioniert. Die reine URL-/Cache-Namens-Ableitung
- * ([toUrl], [cacheFileName]) ist seiteneffektfrei und damit testbar.
+ * Downloaded models are cached in `~/.cache/comic-cutter-onnx/` (key = URL hash + file name), so a
+ * second run works offline. The pure URL/cache-name derivation ([toUrl], [cacheFileName]) is
+ * side-effect free and therefore testable.
  */
 object ModelLocator {
 
-    /** Reine Spec→URL-Ableitung. Lokaler Pfad → `null` (kein Download nötig). */
+    /** Pure spec→URL derivation. Local path → `null` (no download needed). */
     fun toUrl(spec: String): String? = when {
         spec.startsWith("http://") || spec.startsWith("https://") -> spec
         spec.startsWith("hf:") -> huggingFaceUrl(spec.removePrefix("hf:"))
         else -> null
     }
 
-    /** `org/repo/datei.onnx` oder `org/repo@rev/unterordner/datei.onnx` → HF-Resolve-URL. */
+    /** `org/repo/file.onnx` or `org/repo@rev/subfolder/file.onnx` → HF resolve URL. */
     private fun huggingFaceUrl(body: String): String {
         val parts = body.split("/").filter { it.isNotEmpty() }
         require(parts.size >= 3) {
-            "hf:-Spec braucht mindestens 'org/repo/datei.onnx', war: 'hf:$body'"
+            "hf: spec needs at least 'org/repo/file.onnx', was: 'hf:$body'"
         }
         val org = parts[0]
         val (name, revision) = parts[1].split("@").let { it[0] to (it.getOrNull(1) ?: "main") }
@@ -39,7 +39,7 @@ object ModelLocator {
         return "https://huggingface.co/$org/$name/resolve/$revision/$path"
     }
 
-    /** Stabiler, kollisionsarmer Cache-Dateiname aus URL (Hash) + Basisname der URL. */
+    /** Stable, low-collision cache file name from URL (hash) + base name of the URL. */
     fun cacheFileName(url: String): String {
         val base = url.substringAfterLast('/').ifEmpty { "model.onnx" }
         val hash = url.hashCode().absoluteValue.toString(16)
@@ -47,8 +47,8 @@ object ModelLocator {
     }
 
     /**
-     * Spec → Modell-Bytes. Lokaler Pfad wird direkt gelesen; remote wird (einmalig) in
-     * [cacheDir] geladen und danach von dort gelesen.
+     * Spec → model bytes. A local path is read directly; a remote one is downloaded (one-time)
+     * into [cacheDir] and then read from there.
      */
     fun resolveBytes(
         spec: String,
@@ -70,19 +70,19 @@ object ModelLocator {
             spec
         }
         val file = File(path)
-        require(file.isFile) { "Modelldatei nicht gefunden: $path" }
+        require(file.isFile) { "Model file not found: $path" }
         return file.readBytes()
     }
 
     private fun download(url: String, target: File) {
         val client = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NORMAL)   // HF-Resolve leitet auf die CDN um
+            .followRedirects(HttpClient.Redirect.NORMAL)   // HF resolve redirects to the CDN
             .build()
         val request = HttpRequest.newBuilder(URI.create(url)).GET().build()
         val response = client.send(request, HttpResponse.BodyHandlers.ofFile(target.toPath()))
         if (response.statusCode() != 200) {
             target.delete()
-            error("Download fehlgeschlagen (HTTP ${response.statusCode()}): $url")
+            error("Download failed (HTTP ${response.statusCode()}): $url")
         }
     }
 

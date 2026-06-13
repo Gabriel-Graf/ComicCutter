@@ -1,4 +1,4 @@
 package com.panela.comiccutter.model
 
-/** Gerenderte Seite in ARGB-Pixeln (host-unabhängig, kein AWT). */
+/** Rendered page in ARGB pixels (host-independent, no AWT). */
 class RenderedPage(val width: Int, val height: Int, val pixels: IntArray)

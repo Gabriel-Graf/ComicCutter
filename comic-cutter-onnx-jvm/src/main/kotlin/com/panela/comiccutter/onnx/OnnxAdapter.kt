@@ -5,25 +5,25 @@ import com.panela.comiccutter.RawDetection
 import com.panela.comiccutter.model.RenderedPage
 
 /**
- * Modell-spezifische Naht für [OnnxModelRunner]: kapselt Input-Geometrie, Preprocessing und
- * Output-Decode eines konkreten ONNX-Modells. Der Runner kümmert sich nur ums Session-Plumbing
- * (Laden, `session.run`, Tensor-Lebenszyklus) und delegiert alles Modell-Spezifische hierher.
+ * Model-specific seam for [OnnxModelRunner]: encapsulates the input geometry, preprocessing and
+ * output decode of a concrete ONNX model. The runner only handles the session plumbing (loading,
+ * `session.run`, tensor lifecycle) and delegates everything model-specific here.
  *
- * So lässt sich ein abweichendes Community-Modell anbinden — andere Input-Größe, NHWC statt
- * NCHW, BGR statt RGB, anderes Output-Layout (xyxy, transponiert, mit Objectness) — durch eine
- * neue Implementierung, ohne Änderung am Runner und ohne Python zur Laufzeit. Registrierung
- * über die [AdapterRegistry].
+ * This lets a different community model be plugged in — different input size, NHWC instead of
+ * NCHW, BGR instead of RGB, a different output layout (xyxy, transposed, with objectness) — via a
+ * new implementation, without changing the runner and without Python at runtime. Registration
+ * happens through the [AdapterRegistry].
  */
 interface OnnxAdapter {
-    /** Kantenlänge des quadratischen Letterbox-Inputs (z.B. 1024). */
+    /** Edge length of the square letterbox input (e.g. 1024). */
     val inputSize: Int
 
-    /** Form des Input-Tensors, z.B. `(1,3,size,size)` für NCHW-RGB. */
+    /** Shape of the input tensor, e.g. `(1,3,size,size)` for NCHW-RGB. */
     val inputShape: LongArray
 
-    /** Seite → flacher Float-Tensor passend zu [inputShape] (Letterbox-skaliert via [lb]). */
+    /** Page → flat float tensor matching [inputShape] (letterbox-scaled via [lb]). */
     fun preprocess(page: RenderedPage, lb: Letterbox): FloatArray
 
-    /** Roh-Output der Session → Detektionen in Seiten-Pixel-Koordinaten, vor jeder Filterung. */
+    /** Raw session output → detections in page-pixel coordinates, before any filtering. */
     fun decode(result: OrtSession.Result, lb: Letterbox): List<RawDetection>
 }

@@ -3,9 +3,9 @@ package com.panela.comiccutter
 import com.panela.comiccutter.model.RenderedPage
 
 /**
- * [PanelSource] auf Basis eines ML-Modells: [runner] erzeugt rohe Detektionen,
- * [filter] reduziert sie (conf/NMS/min-area) auf Panel-Boxen. Die Reihenfolge
- * bestimmt der [PanelGuide] — hier kommen die Boxen ungeordnet.
+ * [PanelSource] backed by an ML model: [runner] produces raw detections,
+ * [filter] reduces them (conf/NMS/min-area) to panel boxes. The order is
+ * determined by [PanelGuide] — here the boxes come unordered.
  */
 class MlPanelSource(
     private val runner: ModelRunner,

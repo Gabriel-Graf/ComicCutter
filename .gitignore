@@ -24,3 +24,6 @@ comic-cutter-onnx-jvm/parity/.venv/
 
 # Claude Code lokale Projekt-State (Marker, settings.local) — maschinenspezifisch
 .claude/
+
+# Projekt-lokale Claude-Konventionen (gitignored auf Wunsch)
+/CLAUDE.md

@@ -14,7 +14,7 @@ class GutterFillTest {
     }
 
     @Test
-    fun `Rand-Hintergrund wird geflutet, eingeschlossene Insel nicht`() {
+    fun `edge background is flooded, enclosed island is not`() {
         val (m, w, h) = mask(
             "bbbbb",
             "b###b",
@@ -29,7 +29,7 @@ class GutterFillTest {
     }
 
     @Test
-    fun `Full-Bleed an der Kante wird nicht geflutet`() {
+    fun `full-bleed at the edge is not flooded`() {
         val (m, w, h) = mask(
             "#bbb",
             "#bbb",

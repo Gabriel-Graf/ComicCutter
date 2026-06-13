@@ -1,35 +1,35 @@
 # GuidedComic — Comic-Cutter
 
-Reiner-Kotlin Detektor für Comic-/Manga-**Panels**: erkennt die Kacheln einer
-gerenderten Seite, sortiert sie in Lesereihenfolge und liefert eine geführte
-Panel-zu-Panel-Navigation. **Host-unabhängig** — kein AWT, kein `ImageIO`,
-keine Fremd-Abhängigkeit außer der Kotlin-Stdlib. Läuft damit auch headless
-(z. B. in einem Server wie Komga) — und dank Kotlin/JS sogar direkt im Browser.
+Pure-Kotlin detector for comic/manga **panels**: it detects the tiles of a
+rendered page, sorts them into reading order, and provides guided
+panel-to-panel navigation. **Host-independent** — no AWT, no `ImageIO`,
+no third-party dependency beyond the Kotlin stdlib. It therefore runs headless
+(e.g. inside a server like Komga) — and thanks to Kotlin/JS, even directly in the browser.
 
-## Live-Demo
+## Live demo
 
-Panel-Erkennung direkt im Browser, ohne Backend:
+Panel detection directly in the browser, no backend:
 **https://gabriel-graf.github.io/ComicCutter/**
 
-Gemeinfreie Beispielseiten (Quelle/Lizenz sichtbar verlinkt) oder eigenes Bild
-hochladen — die Erkennung läuft komplett lokal, nichts wird hochgeladen.
+Load public-domain example pages (source/license visibly linked) or upload your own
+image — detection runs entirely locally, nothing is uploaded.
 
-## Ansatz
+## Approach
 
-Primärpfad ist ein color-agnostischer **Profil-XY-Cut** (`GutterProfileCut`),
-der helle *und* dunkle Gassen über Projektions-Statistik trennt und auch von
-Sprechblasen überbrückte Gutter toleriert. Findet er keine Gasse (full-bleed-
-Splash), greift ein **Flood-Fill-Fallback** über das vom Rand zusammenhängende
-Weißgutter-Netz. Ein Merge-Pass verschmilzt über interne Kanten zersplitterte
-Kacheln anhand von Content-Kontinuität.
+The primary path is a color-agnostic **profile XY-cut** (`GutterProfileCut`)
+that separates light *and* dark gutters via projection statistics and also
+tolerates gutters bridged by speech balloons. If it finds no gutter (full-bleed
+splash), a **flood-fill fallback** kicks in, working over the white-gutter mesh
+connected to the page border. A merge pass fuses tiles fragmented across internal
+edges based on content continuity.
 
-## Einbinden
+## Integration
 
-> Erfordert JVM 21+. Ab **0.2.0** ist die Lib Kotlin-Multiplatform (jvm + js).
-> Gradle-Konsumenten (z. B. Komga) nutzen die Koordinate unten unverändert —
-> Gradle löst via Modul-Metadata automatisch auf das `-jvm`-Artefakt auf.
+> Requires JVM 21+. As of **0.2.0** the library is Kotlin Multiplatform (jvm + js).
+> Gradle consumers (e.g. Komga) use the coordinate below unchanged —
+> Gradle resolves automatically to the `-jvm` artifact via module metadata.
 
-### Variante A — JitPack (Tag genügt, keine Server-Infrastruktur)
+### Option A — JitPack (a tag is enough, no server infrastructure)
 
 ```kotlin
 repositories {
@@ -41,7 +41,7 @@ dependencies {
 }
 ```
 
-### Variante B — Maven Central (sobald veröffentlicht)
+### Option B — Maven Central (once published)
 
 ```kotlin
 dependencies {
@@ -49,56 +49,84 @@ dependencies {
 }
 ```
 
-## Nutzung
+## Usage
 
 ```kotlin
 import com.panela.comiccutter.PanelDetector
 import com.panela.comiccutter.ReadingDirection
 import com.panela.comiccutter.model.RenderedPage
 
-// Seite als ARGB-Pixel (host-seitig aus BufferedImage o. ä. befüllen):
+// Page as ARGB pixels (fill from BufferedImage or similar on the host side):
 //   val px = IntArray(w * h); img.getRGB(0, 0, w, h, px, 0, w)
 val page = RenderedPage(width, height, px)
 
 val panels = PanelDetector().detect(page, ReadingDirection.RIGHT_TO_LEFT)
-// → List<PanelRect> in Lesereihenfolge
+// → List<PanelRect> in reading order
 ```
 
-Für die geführte Navigation siehe `GuidedNavigator` / `GuidedPosition`.
+For guided navigation see `GuidedNavigator` / `GuidedPosition`.
 
 ## Public API
 
-| Typ | Zweck |
+| Type | Purpose |
 |-----|-------|
-| `PanelDetector` | Panel-Erkennung: `detect(page, direction): List<PanelRect>` |
-| `RenderedPage` | Host-unabhängige Seite: `(width, height, IntArray /*ARGB*/)` |
+| `PanelDetector` | Panel detection: `detect(page, direction): List<PanelRect>` |
+| `RenderedPage` | Host-independent page: `(width, height, IntArray /*ARGB*/)` |
 | `ReadingDirection` | `LEFT_TO_RIGHT` / `RIGHT_TO_LEFT` |
-| `PanelRect` / `NormRect` | Panel-Bounding-Box (Pixel bzw. normalisiert) |
-| `PanelSource` | Naht: Kacheln aus Detektor (`GeometricPanelSource`) **oder** ML (`MlPanelSource`) |
-| `PanelGuide` | `guide(page): PageGuide` — Bild → geordnete Crop-Rects (+ Vollseiten-Fallback) |
-| `GuidedNavigator` | Panel-zu-Panel-Index-Logik über Seiten (Cross-Page; vom Reader nutzbar) |
+| `PanelRect` / `NormRect` | Panel bounding box (pixel or normalized) |
+| `PanelSource` | Seam: tiles from the detector (`GeometricPanelSource`) **or** ML (`MlPanelSource`) |
+| `PanelGuide` | `guide(page): PageGuide` — image → ordered crop rects (+ full-page fallback) |
+| `GuidedNavigator` | Panel-to-panel index logic across pages (cross-page; usable by the reader) |
 
-### ML-Quelle (optional)
+### ML source (optional)
 
-Die `PanelSource`-Naht erlaubt ein ML-Modell statt/neben dem geometrischen
-Detektor. Der Kern definiert nur `ModelRunner` (Interface) + `MlPanelSource` +
-`MlFilter` (conf/NMS/min-area, rein). Einen fertigen ONNX-Runner liefert das
-optionale JVM-Modul **`comic-cutter-onnx-jvm`** (`OnnxModelRunner`, ONNX-Runtime)
-— das **Modell selbst ist nicht Teil der Lib**, der Konsument reicht es zur
-Laufzeit rein. Details: [`comic-cutter-onnx-jvm/README.md`](comic-cutter-onnx-jvm/README.md).
+The `PanelSource` seam allows an ML model instead of, or alongside, the
+geometric detector. The core only defines `ModelRunner` (interface) +
+`MlPanelSource` + `MlFilter` (conf/NMS/min-area, pure). A ready-made ONNX runner
+is provided by the optional JVM module **`comic-cutter-onnx-jvm`**
+(`OnnxModelRunner`, ONNX-Runtime) — the **model itself is not part of the
+library**; the consumer passes it in at runtime. Details:
+[`comic-cutter-onnx-jvm/README.md`](comic-cutter-onnx-jvm/README.md).
 
-## Bauen
+#### Bring your own model
+
+The model-specific parts (input geometry, preprocessing, output decode) live in
+the `OnnxAdapter`; `OnnxModelRunner` only does the session plumbing. Shipped is
+`Yolo11Adapter` (fixed contract YOLO11 single-class) as the default. A community
+model with a different output (xyxy, transposed, NHWC, BGR …) needs **no Python** —
+a custom `OnnxAdapter` in Kotlin is enough, registrable via the `AdapterRegistry`.
+
+#### CLI: test a model against an image offline
+
+The module is executable — a quick test of the library with your own or a
+third-party model, without Python:
 
 ```bash
-./gradlew build               # kompilieren + Tests (jvm + js)
-./gradlew publishToMavenLocal # nach ~/.m2 (lokales Einbinden)
-./gradlew jsBrowserDistribution # JS-Bundle für die Demo
+# Local model + overlay PNG
+./gradlew :comic-cutter-onnx-jvm:run -q --args="\
+  --model /path/best.onnx --image /path/page.jpg --overlay out.png"
+
+# Hugging Face (one-time download to ~/.cache/comic-cutter-onnx/, offline afterwards)
+./gradlew :comic-cutter-onnx-jvm:run -q --args="\
+  --model hf:org/repo/best.onnx --image /path/page.jpg"
 ```
 
-Demo lokal: Bundle nach `demo/src/kotlin/` kopieren, dann `cd demo && npm install && npm run dev`.
-Deploy nach GitHub Pages läuft automatisch über `.github/workflows/pages.yml`.
+`--model` takes a local path, `hf:org/repo[@rev]/file.onnx`, or `https://…`;
+further flags: `--adapter --imgsz --conf --nms --rtl --overlay`. Output: panels
+as JSON to stdout. (Gradle's `run` cwd is the module folder → use absolute paths.)
 
-## Lizenz
+## Building
 
-[AGPL-3.0](LICENSE). Einbindende Projekte unterliegen damit dem AGPL-Copyleft
-(inkl. Netzwerk-Klausel).
+```bash
+./gradlew build               # compile + tests (jvm + js)
+./gradlew publishToMavenLocal # to ~/.m2 (local integration)
+./gradlew jsBrowserDistribution # JS bundle for the demo
+```
+
+Demo locally: copy the bundle to `demo/src/kotlin/`, then `cd demo && npm install && npm run dev`.
+Deploy to GitHub Pages runs automatically via `.github/workflows/pages.yml`.
+
+## License
+
+[AGPL-3.0](LICENSE). Consuming projects are therefore subject to the AGPL copyleft
+(incl. the network clause).

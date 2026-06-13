@@ -2,22 +2,22 @@ package com.panela.comiccutter
 
 import com.panela.comiccutter.model.RenderedPage
 
-/** Geführte Anzeige-Schritte für EIN Seitenbild. [steps] ist nie leer (min. ein Schritt). */
+/** Guided display steps for ONE page image. [steps] is never empty (at least one step). */
 data class PageGuide(
-    /** Geordnete Crop-Rects in bild-normalisierten Koordinaten (0..1), Comics: links→rechts. */
+    /** Ordered crop rects in image-normalized coordinates (0..1), comics: left-to-right. */
     val steps: List<NormRect>,
-    /** true, wenn die ganze Seite ein Schritt ist (Fallback bei <2 erkannten Kacheln). */
+    /** true if the whole page is a single step (fallback when fewer than 2 tiles are detected). */
     val isFullPage: Boolean,
 )
 
 /**
- * Wandelt ein Seitenbild in geführte Anzeige-Schritte: erkennt die Kacheln über die [source],
- * sortiert sie in Lesereihenfolge (Comics: links→rechts) und normalisiert sie auf [0..1].
- * Bei <2 Kacheln (Splash oder unsichere Erkennung) ist die ganze Seite ein Schritt.
+ * Turns a page image into guided display steps: detects the tiles via the [source],
+ * sorts them into reading order (comics: left-to-right) and normalizes them to [0..1].
+ * With fewer than 2 tiles (splash or uncertain detection) the whole page is a single step.
  *
- * Reine Bild→Kacheln-Funktion ohne State: Die Seiten-Verwaltung (welche Seite, Sprung,
- * Fortschritt, Position merken) bleibt beim aufrufenden Reader — die Lib sagt nur, welche
- * Kacheln ein gegebenes Bild hat und in welcher Reihenfolge sie anzuzeigen sind.
+ * A pure image-to-tiles function with no state: page management (which page, jump,
+ * progress, remembering the position) stays with the calling reader — the lib only reports which
+ * tiles a given image has and in what order they should be displayed.
  */
 class PanelGuide(private val source: PanelSource = GeometricPanelSource()) {
 

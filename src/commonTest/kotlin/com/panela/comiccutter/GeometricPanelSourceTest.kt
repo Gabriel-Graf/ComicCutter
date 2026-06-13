@@ -5,9 +5,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class GeometricPanelSourceTest {
-    /** Eine 2-Panel-Seite (weiße Gasse in der Mitte): Quelle liefert dieselben Boxen wie der Detektor. */
+    /** A 2-panel page (white gutter in the middle): the source returns the same boxes as the detector. */
     @Test
-    fun source_liefert_dieselben_boxen_wie_detektor() {
+    fun source_returns_same_boxes_as_detector() {
         val w = 200; val h = 100
         val px = IntArray(w * h) { 0xFFFFFFFF.toInt() }
         for (y in 10 until 90) for (x in 0 until w) {

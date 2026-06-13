@@ -1,12 +1,12 @@
 package com.panela.comiccutter
 
-/** Position im geführten Lesefluss: [page] = Seitenindex, [unit] = Navigations-Einheit (Panel-Index bzw. 0 = Vollseite). */
+/** Position in the guided reading flow: [page] = page index, [unit] = navigation unit (panel index, or 0 = full page). */
 data class GuidedPosition(val page: Int, val unit: Int)
 
 /**
- * Reine Index-Logik für die Panel-für-Panel-Navigation über Seitengrenzen hinweg.
- * [unitsAt] liefert die Anzahl Navigations-Einheiten einer Seite (immer >= 1;
- * eine Seite mit <2 erkannten Panels hat genau 1 Einheit = Vollseite).
+ * Pure index logic for panel-by-panel navigation across page boundaries.
+ * [unitsAt] returns the number of navigation units on a page (always >= 1;
+ * a page with fewer than 2 detected panels has exactly 1 unit = full page).
  */
 object GuidedNavigator {
 

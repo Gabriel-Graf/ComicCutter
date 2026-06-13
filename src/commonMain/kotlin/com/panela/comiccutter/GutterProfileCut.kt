@@ -3,67 +3,67 @@ package com.panela.comiccutter
 import com.panela.comiccutter.model.RenderedPage
 
 /**
- * Fallback-Segmentierung für full-bleed- und Dunkel-auf-Dunkel-Seiten, bei denen das
- * Weißgutter-Flood ([GutterFill]) versagt (Panels berühren den Seitenrand, das Gutter-Netz
- * ist vom Rand nicht erreichbar, oder die Gassen sind dunkel statt weiß).
+ * Fallback segmentation for full-bleed and dark-on-dark pages where the white-gutter flood
+ * ([GutterFill]) fails (panels touch the page edge, the gutter mesh is not reachable from the edge,
+ * or the gutters are dark instead of white).
  *
- * Prinzip (Kumiko-artiger Sobel-Kantenpfad als rekursiver Guillotine-XY-Cut): Eine Gutter-Linie
- * ist ein achsenparalleler Streifen mit nahezu KEINER Kantenaktivität — egal ob weiß oder schwarz.
- * Zeichenfläche (Art) hat hohe Kantendichte. Über die Sobel-Gradientenmagnitude wird ein
- * Kanten-Binärbild gebildet (adaptive Perzentil-Schwelle), dann pro Zeile/Spalte einer Region die
- * Kantendichte gemessen; ein zusammenhängendes INNERES Tal niedriger Dichte = Gutter. Anders als
- * eine reine Uniformitäts-Schwelle toleriert die Kantendichte einzelne kreuzende Sprechblasen/
- * Art-Spitzen — die Gasse bleibt insgesamt kantenarm.
+ * Principle (Kumiko-style Sobel edge path as a recursive guillotine XY-cut): A gutter line is an
+ * axis-aligned strip with almost NO edge activity — regardless of whether it is white or black.
+ * Art areas have high edge density. A binary edge image is formed from the Sobel gradient magnitude
+ * (adaptive percentile threshold), then the edge density is measured per row/column of a region; a
+ * connected INTERIOR valley of low density = gutter. Unlike a pure uniformity threshold, the edge
+ * density tolerates individual crossing speech bubbles / art spikes — the gutter stays edge-sparse
+ * overall.
  *
- * Praxis-Erkenntnis (gemessen gegen Hand-GT): reine Kantendichte qualifiziert weiße Text-Panels
- * fälschlich als Gutter (weiß, aber kantenreich) und verfehlt von Sprechblasen überbrückte Gassen.
- * Robuster ist ein kombiniertes Signal pro Zeile/Spalte:
+ * Practical finding (measured against hand-annotated GT): pure edge density wrongly qualifies white
+ * text panels as gutters (white, but edge-rich) and misses gutters bridged by speech bubbles. A
+ * combined per-row/column signal is more robust:
  *
- *   Gutter  ⇔  (Hell-Anteil ≥ [minBrightFraction]  UND  Kantendichte ≤ [maxGutterDensity])
- *              ODER  Luminanz-Std ≤ [maxGutterStd]
+ *   Gutter  ⇔  (bright fraction ≥ [minBrightFraction]  AND  edge density ≤ [maxGutterDensity])
+ *              OR  luminance std ≤ [maxGutterStd]
  *
- * Der UND-Term fängt weiße Gassen, toleriert dabei überbrückende Blasen/Rahmenlinien (Hell-Anteil
- * bleibt hoch, Kantendichte niedrig), schließt aber Text-Panels aus (hell, aber kantenreich). Der
- * ODER-Std-Term fängt perfekt uniforme Gassen jeder Farbe — insbesondere Dunkel-auf-Dunkel.
+ * The AND term catches white gutters while tolerating bridging bubbles/border lines (bright fraction
+ * stays high, edge density low), but excludes text panels (bright, but edge-rich). The OR-std term
+ * catches perfectly uniform gutters of any color — in particular dark-on-dark.
  *
- * Geschnitten wird in der Talmitte; danach wird jede Kachel auf ihre Kanten-Bounding-Box getrimmt
- * (Außenrand/Margin entfernt), was sich mit der Ground-Truth-Konvention (Panel = Art-Rechteck) deckt.
+ * The cut is made at the valley center; each tile is then trimmed to its edge bounding box (outer
+ * margin removed), which matches the ground-truth convention (panel = art rectangle).
  *
- * Reines Kotlin, host-testbar. Color-agnostisch — fängt die Edge-Cases, die das helligkeits-basierte
- * Flood prinzipiell nicht sehen kann.
+ * Pure Kotlin, host-testable. Color-agnostic — catches the edge cases that the brightness-based
+ * flood inherently cannot see.
  */
 object GutterProfileCut {
 
-    /** Kachel-Mindest-Kantenanteil; darunter ist die Fläche blank (kein Panel). */
+    /** Minimum tile edge fraction; below this the area is blank (not a panel). */
     private const val MIN_EDGE_PRESENCE = 0.002
 
     /**
-     * @param edgePercentile  Perzentil der Gradientenmagnitude für die Kantenschwelle (0..100).
-     * @param minPanel        Minimale Kachelausdehnung (px) je Achse — verhindert Schnitte nah am Rand.
-     * @param maxGutterDensity Kantendichte (0..1) der UND-Bedingung für helle Gassen.
-     * @param minBrightFraction Hell-Anteil (0..1) der UND-Bedingung für helle Gassen.
-     * @param brightThreshold Luminanz, ab der ein Pixel als „hell" (Gutter-Hintergrund) zählt.
-     * @param maxGutterStd    Luminanz-Std für GROSSE Boxen (≥ [bigAreaFraction] Seitenfläche), unter der
-     *                        eine Zeile/Spalte (ODER-Term) als uniforme Gasse gilt — permissiv, um echte
-     *                        (auch dunkle) Gassen am Seiten-Top-Level zu trennen.
-     * @param maxGutterStdSmall Strengerer Std für KLEINE Boxen. Asymmetrie: Over-Splits an internen dunklen
-     *                        Strukturen (Stahlträger, Gebäudekanten) entstehen beim Rekursieren IN ein Panel
-     *                        (kleine Box); ein strikter Std dort verhindert sie, ohne die großflächige
-     *                        Gassen-Trennung zu schwächen. Gemessen: hebt Precision UND Recall zugleich.
-     * @param bigAreaFraction Flächen-Schwelle, ab der eine Box als „groß" (permissiver Std) gilt.
-     * @param noiseK          Page-adaptiver Std-Zuschlag: der std-Schwellwert wird um `noiseK ×
-     *                        Rausch-Floor` der Seite angehoben. Golden-Age-Newsprint-Scans haben hohes
-     *                        Korn (Floor ~2-4) — ihre dunklen Gassen sind verrauscht und überschreiten
-     *                        den festen Std-20-Schwellwert, würden also verfehlt. Saubere moderne Seiten
-     *                        haben Floor ~0, behalten den Basis-Std → kein Over-Split. Domänen-Erkennung
-     *                        rein aus dem Bild, ohne externes Flag.
-     * @param gutterDarkLo    Mid-Tone-Ausschluss (untere Grenze): der Std-Term feuert nur, wenn die Zeile/
-     *                        Spalte im Mittel ≤ dieser Luminanz (dunkle Tinten-Gasse) liegt …
-     * @param gutterBrightHi  … ODER ≥ dieser Luminanz (helle Papier-Gasse). Uniforme MID-Tone-Streifen
-     *                        (Himmel, Wand in moderner Art) werden so NICHT als Gasse zerschnitten — das
-     *                        erlaubt den höheren page-adaptiven Std, ohne moderne Flächen over-zu-splitten.
-     * @param trimContent     Content-Mindestanteil beim Trimmen; Zeilen/Spalten darunter gelten als Rand.
-     * @param minAreaFraction Kacheln kleiner als dieser Seitenflächenanteil entfallen.
+     * @param edgePercentile  Percentile of the gradient magnitude for the edge threshold (0..100).
+     * @param minPanel        Minimum tile extent (px) per axis — prevents cuts close to the edge.
+     * @param maxGutterDensity Edge density (0..1) of the AND condition for bright gutters.
+     * @param minBrightFraction Bright fraction (0..1) of the AND condition for bright gutters.
+     * @param brightThreshold Luminance at or above which a pixel counts as "bright" (gutter background).
+     * @param maxGutterStd    Luminance std for LARGE boxes (≥ [bigAreaFraction] of the page area), below
+     *                        which a row/column (OR term) counts as a uniform gutter — permissive, to
+     *                        separate real (including dark) gutters at the page top level.
+     * @param maxGutterStdSmall Stricter std for SMALL boxes. Asymmetry: over-splits on internal dark
+     *                        structures (steel beams, building edges) arise when recursing INTO a panel
+     *                        (small box); a strict std there prevents them without weakening the
+     *                        large-scale gutter separation. Measured: raises both precision AND recall.
+     * @param bigAreaFraction Area threshold at or above which a box counts as "large" (permissive std).
+     * @param noiseK          Page-adaptive std boost: the std threshold is raised by `noiseK ×
+     *                        noise floor` of the page. Golden Age newsprint scans have high grain
+     *                        (floor ~2-4) — their dark gutters are noisy and exceed the fixed std-20
+     *                        threshold, so they would be missed. Clean modern pages have floor ~0 and
+     *                        keep the base std → no over-split. Domain detection purely from the image,
+     *                        without an external flag.
+     * @param gutterDarkLo    Mid-tone exclusion (lower bound): the std term only fires when the row/
+     *                        column has a mean luminance ≤ this value (dark ink gutter) …
+     * @param gutterBrightHi  … OR ≥ this luminance (bright paper gutter). Uniform MID-tone strips
+     *                        (sky, wall in modern art) are thus NOT cut apart as a gutter — this allows
+     *                        the higher page-adaptive std without over-splitting modern areas.
+     * @param trimContent     Minimum content fraction when trimming; rows/columns below this count as margin.
+     * @param minAreaFraction Tiles smaller than this fraction of the page area are dropped.
      */
     fun detect(
         page: RenderedPage,
@@ -88,19 +88,19 @@ object GutterProfileCut {
         val lum = IntArray(page.pixels.size) { ImageBinarization.luminance(page.pixels[it]) }
         val edge = sobelEdgeMask(lum, w, h, edgePercentile)
         val bright = BooleanArray(lum.size) { lum[it] >= brightThreshold }
-        // Content-Maske: weder hell-Gutter noch dunkel-Gutter → echte Zeichenfläche. Otsu-gestützt,
-        // damit der Trim auf die Art-Bounding-Box schneidet (deckt sich mit der GT-Konvention).
+        // Content mask: neither bright gutter nor dark gutter → real art area. Otsu-assisted, so that
+        // the trim cuts to the art bounding box (matches the GT convention).
         val otsu = ImageBinarization.otsuThreshold(page)
         val brightCut = maxOf(otsu, brightThreshold)
         val darkCut = minOf(otsu, 60)
         val content = BooleanArray(lum.size) { lum[it] < brightCut && lum[it] > darkCut }
         val bigArea = (w.toLong() * h * bigAreaFraction).toLong()
-        // Page-adaptiver Std-Zuschlag aus dem Korn-/Rausch-Floor (s. noiseK-Doku).
+        // Page-adaptive std boost from the grain/noise floor (see noiseK doc).
         val noiseFloor = localNoiseFloor(lum, w, h)
-        // Zuschlag NUR auf den GROSSEN-Box-Std (das Under-Split-/Top-Level-Trennen). Der kleine Std
-        // bleibt strikt: Over-Splits an internen dunklen Strukturen entstehen beim Rekursieren IN ein
-        // Panel (kleine Box) — den dort anzuheben würde Newsprint-Panels zersplittern (gemessen:
-        // Precision-Crash). Asymmetrie wie beim festen Std (s. maxGutterStdSmall-Doku).
+        // Boost ONLY the LARGE-box std (the under-split / top-level separation). The small std stays
+        // strict: over-splits on internal dark structures arise when recursing INTO a panel (small
+        // box) — raising it there would fragment newsprint panels (measured: precision crash).
+        // Asymmetry as with the fixed std (see maxGutterStdSmall doc).
         val noiseBoost = noiseK * noiseFloor
         val params = CutParams(
             minPanel, maxGutterDensity, minBrightFraction,
@@ -116,7 +116,7 @@ object GutterProfileCut {
             .filter { tileEdgeFraction(edge, w, it) > MIN_EDGE_PRESENCE }
     }
 
-    /** Anteil Kantenpixel in der Kachel — truly blanke Flächen (uniforme Seite) haben ~0 und sind kein Panel. */
+    /** Fraction of edge pixels in the tile — truly blank areas (uniform page) have ~0 and are not a panel. */
     private fun tileEdgeFraction(edge: BooleanArray, imgW: Int, box: PanelRect): Double {
         val x1 = box.x + box.width
         val y1 = box.y + box.height
@@ -125,32 +125,32 @@ object GutterProfileCut {
         return c.toDouble() / (box.width.toLong() * box.height).coerceAtLeast(1)
     }
 
-    /** Schwellen für den rekursiven Schnitt (gebündelt, um lange Parameterlisten zu vermeiden). */
+    /** Thresholds for the recursive cut (bundled to avoid long parameter lists). */
     private data class CutParams(
         val minPanel: Int, val maxDensity: Double, val minBright: Double,
         val maxStd: Double, val maxStdSmall: Double, val bigArea: Long,
         val darkLo: Double, val brightHi: Double,
     ) {
-        /** Box-größenabhängiger Std-Schwellwert (permissiv für große, strikt für kleine Boxen). */
+        /** Box-size-dependent std threshold (permissive for large, strict for small boxes). */
         fun stdFor(box: PanelRect): Double =
             if (box.width.toLong() * box.height >= bigArea) maxStd else maxStdSmall
     }
 
-    // ── Rausch-Floor ──────────────────────────────────────────────────────────────────────────
+    // ── Noise floor ───────────────────────────────────────────────────────────────────────────
 
     /**
-     * Korn-/Rausch-Floor der Seite = 5. Perzentil der lokalen Luminanz-Std in [win]×[win]-Fenstern.
-     * Die flachsten Patches (uniformes Papier/Gasse/Himmel) tragen nur das Sensor-/Druck-Korn — bei
-     * Newsprint-Scans (Golden Age) ~2-4, bei sauberen digitalen Seiten ~0. Integral-Bilder halten das
-     * bei O(Pixel). Border (halbes Fenster) wird übersprungen; für das Perzentil irrelevant.
+     * Grain/noise floor of the page = 5th percentile of the local luminance std in [win]×[win]
+     * windows. The flattest patches (uniform paper/gutter/sky) carry only the sensor/print grain —
+     * ~2-4 for newsprint scans (Golden Age), ~0 for clean digital pages. Integral images keep this at
+     * O(pixels). The border (half a window) is skipped; irrelevant for the percentile.
      */
     private fun localNoiseFloor(lum: IntArray, w: Int, h: Int, win: Int = 5): Double {
         val r = win / 2
         if (w <= win || h <= win) return 0.0
         val sw = w + 1
-        // Double (nicht Long) für die Integral-Bilder: Kotlin/JS emuliert Long als Objekt — eine
-        // Pro-Pixel-Long-Schleife über ~1.6 MP kostet im Browser ~1 s. Double ist JS-nativ und stellt
-        // die Summen exakt dar (sumSq ≤ 255²·Pixel ≈ 1e11 ≪ 2^53). Auf der JVM identisch.
+        // Double (not Long) for the integral images: Kotlin/JS emulates Long as an object — a
+        // per-pixel Long loop over ~1.6 MP costs ~1 s in the browser. Double is JS-native and
+        // represents the sums exactly (sumSq ≤ 255²·pixels ≈ 1e11 ≪ 2^53). Identical on the JVM.
         val sum = DoubleArray(sw * (h + 1))
         val sumSq = DoubleArray(sw * (h + 1))
         for (y in 0 until h) {
@@ -187,9 +187,9 @@ object GutterProfileCut {
         return 0.0
     }
 
-    // ── Kantenbild ────────────────────────────────────────────────────────────────────────────
+    // ── Edge image ────────────────────────────────────────────────────────────────────────────
 
-    /** Sobel-Magnitude |gx|+|gy| > adaptive Perzentil-Schwelle → Kanten-Bitmaske. */
+    /** Sobel magnitude |gx|+|gy| > adaptive percentile threshold → edge bitmask. */
     private fun sobelEdgeMask(lum: IntArray, w: Int, h: Int, percentile: Double): BooleanArray {
         val mag = IntArray(lum.size)
         val hist = IntArray(1021) // |gx|+|gy| ∈ 0..1020
@@ -215,7 +215,7 @@ object GutterProfileCut {
         return hist.size - 1
     }
 
-    // ── Rekursiver Schnitt ──────────────────────────────────────────────────────────────────────
+    // ── Recursive cut ───────────────────────────────────────────────────────────────────────────
 
     private fun cut(
         edge: BooleanArray, bright: BooleanArray, lum: IntArray, imgW: Int, box: PanelRect,
@@ -233,7 +233,7 @@ object GutterProfileCut {
             colStd(lum, imgW, box), colMean(lum, imgW, box), p, maxStd,
         )
 
-        // Breiteres Tal = sauberere Trennung.
+        // Wider valley = cleaner separation.
         val preferRow = when {
             rowCut == null -> false
             colCut == null -> true
@@ -255,26 +255,26 @@ object GutterProfileCut {
         }
     }
 
-    /** Schnittkandidat: lokaler Index (relativ zur Box-Achse) der Talmitte + Talbreite. */
+    /** Cut candidate: local index (relative to the box axis) of the valley center + valley width. */
     private data class Cut(val center: Int, val width: Int)
 
     /**
-     * Breitestes INNERES Tal mit Mitte ≥ [CutParams.minPanel] von beiden Enden. Eine Profilposition
-     * zählt zum Tal, wenn (Hell-Anteil ≥ minBright UND Kantendichte ≤ maxDensity) ODER Std ≤ maxStd
-     * (siehe Klassen-Doku). Ränder (Lauf berührt Box-Kante) sind Margins, keine Gassen → ausgeschlossen.
+     * Widest INTERIOR valley with its center ≥ [CutParams.minPanel] from both ends. A profile position
+     * belongs to the valley if (bright fraction ≥ minBright AND edge density ≤ maxDensity) OR std ≤
+     * maxStd (see class doc). Edges (run touches the box border) are margins, not gutters → excluded.
      *
-     * Bewusst OHNE Profil-Glättung: gegen Hand-GT gemessen löscht eine 3er-Glättung dünne (wenige px
-     * breite) Gassen und kostet messbar Recall (0.53 → 0.48). Das ODER-/UND-Kriterium ist robust genug
-     * gegen Einzel-Pixel-Rauschen, weil ein Tal von genau einer Position bereits einen gültigen Schnitt
-     * ergibt — und engste echte Gassen sollen erhalten bleiben.
+     * Deliberately WITHOUT profile smoothing: measured against hand-annotated GT, a width-3 smoothing
+     * erases thin (few-px-wide) gutters and costs measurable recall (0.53 → 0.48). The OR/AND criterion
+     * is robust enough against single-pixel noise, because a valley of exactly one position already
+     * yields a valid cut — and the narrowest real gutters should be preserved.
      */
     private fun widestInteriorValley(
         density: DoubleArray, bright: DoubleArray, std: DoubleArray, mean: DoubleArray, p: CutParams, maxStd: Double,
     ): Cut? {
         val n = density.size
         if (n < 2 * p.minPanel + 1) return null
-        // Std-Term nur für farblich EXTREME (dunkle Tinten- ODER helle Papier-) Streifen — Mid-Tone
-        // ausgeschlossen, damit uniforme Art-Flächen nicht zerschnitten werden (s. detect-Doku).
+        // Std term only for color-EXTREME (dark ink OR bright paper) strips — mid-tone excluded, so
+        // that uniform art areas are not cut apart (see detect doc).
         fun isGutter(i: Int) = (bright[i] >= p.minBright && density[i] <= p.maxDensity) ||
             (std[i] <= maxStd && (mean[i] <= p.darkLo || mean[i] >= p.brightHi))
         var best: Cut? = null
@@ -297,9 +297,9 @@ object GutterProfileCut {
         return best
     }
 
-    // ── Trimmen auf die Content-Bounding-Box ────────────────────────────────────────────────────
+    // ── Trim to the content bounding box ────────────────────────────────────────────────────────
 
-    /** Schneidet Außenränder (Gutter/Margin) weg: behält den Bereich mit Content-Anteil > [contentFraction]. */
+    /** Cuts off outer margins (gutter/margin): keeps the area with content fraction > [contentFraction]. */
     private fun trim(content: BooleanArray, imgW: Int, box: PanelRect, contentFraction: Double): PanelRect? {
         val rows = rowFraction(content, imgW, box)
         val cols = colFraction(content, imgW, box)
@@ -311,9 +311,9 @@ object GutterProfileCut {
         return PanelRect(box.x + left, box.y + top, right - left + 1, bottom - top + 1)
     }
 
-    // ── Kantendichte-Profile ────────────────────────────────────────────────────────────────────
+    // ── Edge-density profiles ───────────────────────────────────────────────────────────────────
 
-    /** Pro Zeile der Box: Anteil Kantenpixel über die Spalten (horizontale Gutter-Erkennung). */
+    /** Per row of the box: fraction of edge pixels across the columns (horizontal gutter detection). */
     private fun rowDensity(edge: BooleanArray, imgW: Int, box: PanelRect): DoubleArray {
         val x1 = box.x + box.width
         val cols = box.width.coerceAtLeast(1)
@@ -326,7 +326,7 @@ object GutterProfileCut {
         }
     }
 
-    /** Pro Spalte der Box: Anteil Kantenpixel über die Zeilen (vertikale Gutter-Erkennung). */
+    /** Per column of the box: fraction of edge pixels across the rows (vertical gutter detection). */
     private fun colDensity(edge: BooleanArray, imgW: Int, box: PanelRect): DoubleArray {
         val y1 = box.y + box.height
         val rows = box.height.coerceAtLeast(1)
@@ -339,7 +339,7 @@ object GutterProfileCut {
         }
     }
 
-    /** Pro Zeile der Box: Anteil heller Pixel über die Spalten (helle Gasse, toleriert Blasen). */
+    /** Per row of the box: fraction of bright pixels across the columns (bright gutter, tolerates bubbles). */
     private fun rowFraction(bright: BooleanArray, imgW: Int, box: PanelRect): DoubleArray {
         val x1 = box.x + box.width
         val cols = box.width.coerceAtLeast(1)
@@ -352,7 +352,7 @@ object GutterProfileCut {
         }
     }
 
-    /** Pro Spalte der Box: Anteil heller Pixel über die Zeilen. */
+    /** Per column of the box: fraction of bright pixels across the rows. */
     private fun colFraction(bright: BooleanArray, imgW: Int, box: PanelRect): DoubleArray {
         val y1 = box.y + box.height
         val rows = box.height.coerceAtLeast(1)
@@ -365,7 +365,7 @@ object GutterProfileCut {
         }
     }
 
-    /** Pro Zeile der Box: Luminanz-Std über die Spalten (uniformer Streifen = Gutter). */
+    /** Per row of the box: luminance std across the columns (uniform strip = gutter). */
     private fun rowStd(lum: IntArray, imgW: Int, box: PanelRect): DoubleArray {
         val x1 = box.x + box.width
         val cols = box.width.coerceAtLeast(1)
@@ -378,7 +378,7 @@ object GutterProfileCut {
         }
     }
 
-    /** Pro Spalte der Box: Luminanz-Std über die Zeilen. */
+    /** Per column of the box: luminance std across the rows. */
     private fun colStd(lum: IntArray, imgW: Int, box: PanelRect): DoubleArray {
         val y1 = box.y + box.height
         val rows = box.height.coerceAtLeast(1)
@@ -391,7 +391,7 @@ object GutterProfileCut {
         }
     }
 
-    /** Pro Zeile der Box: mittlere Luminanz über die Spalten (für den Mid-Tone-Ausschluss). */
+    /** Per row of the box: mean luminance across the columns (for the mid-tone exclusion). */
     private fun rowMean(lum: IntArray, imgW: Int, box: PanelRect): DoubleArray {
         val x1 = box.x + box.width
         val cols = box.width.coerceAtLeast(1)
@@ -404,7 +404,7 @@ object GutterProfileCut {
         }
     }
 
-    /** Pro Spalte der Box: mittlere Luminanz über die Zeilen. */
+    /** Per column of the box: mean luminance across the rows. */
     private fun colMean(lum: IntArray, imgW: Int, box: PanelRect): DoubleArray {
         val y1 = box.y + box.height
         val rows = box.height.coerceAtLeast(1)

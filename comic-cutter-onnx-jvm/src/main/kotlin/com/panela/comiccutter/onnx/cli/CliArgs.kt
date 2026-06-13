@@ -3,9 +3,9 @@ package com.panela.comiccutter.onnx.cli
 import com.panela.comiccutter.onnx.AdapterRegistry
 
 /**
- * Geparste CLI-Argumente. Reine Datenstruktur + reiner [parse] — keine IO, damit der Parser
- * ohne Modell/Bild testbar ist. Validierung (fehlende Pflichtargumente, kaputte Zahlen) wirft
- * [IllegalArgumentException]; die Shell ([Main]) fängt und gibt die Usage aus.
+ * Parsed CLI arguments. Pure data structure + pure [parse] — no IO, so the parser is testable
+ * without a model/image. Validation (missing required arguments, malformed numbers) throws
+ * [IllegalArgumentException]; the shell ([Main]) catches it and prints the usage.
  */
 data class CliArgs(
     val model: String,
@@ -19,21 +19,21 @@ data class CliArgs(
 ) {
     companion object {
         val USAGE: String = """
-            comic-cutter-onnx — Panel-Detektion mit einem ONNX-Modell (offline-fähig).
+            comic-cutter-onnx — panel detection with an ONNX model (offline-capable).
 
-            Pflicht:
-              --model <spec>    Lokaler Pfad | hf:org/repo/datei.onnx | https://…
-              --image <pfad>    Eingabe-Seite (jpg/png/…)
+            Required:
+              --model <spec>    Local path | hf:org/repo/file.onnx | https://…
+              --image <path>    Input page (jpg/png/…)
 
             Optional:
-              --adapter <name>  Output-Adapter (Default: yolo11). Bekannt: ${AdapterRegistry.names().joinToString(", ")}
-              --imgsz <int>     Letterbox-Kantenlänge (Default: ${AdapterRegistry.DEFAULT_INPUT_SIZE})
-              --conf <float>    Score-Schwelle (Default: 0.25)
-              --nms <float>     NMS-IoU (Default: 0.7)
-              --rtl             Manga-Lesereihenfolge (rechts→links)
-              --overlay <pfad>  Overlay-PNG mit nummerierten Boxen schreiben
+              --adapter <name>  Output adapter (default: yolo11). Known: ${AdapterRegistry.names().joinToString(", ")}
+              --imgsz <int>     Letterbox edge length (default: ${AdapterRegistry.DEFAULT_INPUT_SIZE})
+              --conf <float>    Score threshold (default: 0.25)
+              --nms <float>     NMS IoU (default: 0.7)
+              --rtl             Manga reading order (right→left)
+              --overlay <path>  Write overlay PNG with numbered boxes
 
-            Ausgabe: Panels als JSON-Array nach stdout.
+            Output: panels as a JSON array to stdout.
         """.trimIndent()
 
         fun parse(args: Array<String>): CliArgs {
@@ -44,16 +44,16 @@ data class CliArgs(
                 when (val a = args[i]) {
                     "--rtl" -> rtl = true
                     "--model", "--image", "--adapter", "--imgsz", "--conf", "--nms", "--overlay" -> {
-                        require(i + 1 < args.size) { "Argument $a erwartet einen Wert." }
+                        require(i + 1 < args.size) { "Argument $a expects a value." }
                         map[a] = args[++i]
                     }
-                    else -> throw IllegalArgumentException("Unbekanntes Argument: $a")
+                    else -> throw IllegalArgumentException("Unknown argument: $a")
                 }
                 i++
             }
 
-            val model = requireNotNull(map["--model"]) { "--model fehlt." }
-            val image = requireNotNull(map["--image"]) { "--image fehlt." }
+            val model = requireNotNull(map["--model"]) { "--model is missing." }
+            val image = requireNotNull(map["--image"]) { "--image is missing." }
 
             return CliArgs(
                 model = model,
@@ -68,9 +68,9 @@ data class CliArgs(
         }
 
         private fun String.toIntValue(flag: String): Int =
-            toIntOrNull() ?: throw IllegalArgumentException("$flag erwartet eine Ganzzahl, war: '$this'")
+            toIntOrNull() ?: throw IllegalArgumentException("$flag expects an integer, was: '$this'")
 
         private fun String.toFloatValue(flag: String): Float =
-            toFloatOrNull() ?: throw IllegalArgumentException("$flag erwartet eine Zahl, war: '$this'")
+            toFloatOrNull() ?: throw IllegalArgumentException("$flag expects a number, was: '$this'")
     }
 }
