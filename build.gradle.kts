@@ -6,7 +6,7 @@ plugins {
 // io.github.<github-user> is the namespace auto-verified by Sonatype.
 // On JitPack the group is replaced by com.github.<user> — irrelevant there.
 group = "io.github.gabriel-graf"
-version = "0.3.1"
+version = "0.3.2"
 
 repositories { mavenCentral() }
 

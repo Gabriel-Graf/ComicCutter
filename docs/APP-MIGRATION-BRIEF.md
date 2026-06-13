@@ -14,7 +14,7 @@ arbitration) — so detection gets better with the switch, not just equal.
 
 ## 1. Add the dependency
 
-**Now (local, immediately buildable):** The library is published as `0.3.1` in MavenLocal.
+**Now (local, immediately buildable):** The library is published as `0.3.2` in MavenLocal.
 
 ```kotlin
 // settings.gradle.kts / build.gradle.kts of the app
@@ -23,16 +23,16 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    implementation("io.github.gabriel-graf:comic-cutter:0.3.1")
+    implementation("io.github.gabriel-graf:comic-cutter:0.3.2")
     // Gradle resolves automatically to the -jvm artifact via KMP metadata.
 }
 ```
 
-**Later (real release, CI):** Once a tag `0.3.1` is pushed to GitHub:
+**Later (real release, CI):** Once a tag `0.3.2` is pushed to GitHub:
 
 ```kotlin
 repositories { maven("https://jitpack.io") }
-dependencies { implementation("com.github.Gabriel-Graf:ComicCutter:0.3.1") }
+dependencies { implementation("com.github.Gabriel-Graf:ComicCutter:0.3.2") }
 ```
 
 > The optional ML module `comic-cutter-onnx-jvm` (ONNX runner) is **not yet**
@@ -152,7 +152,7 @@ the `source` in `PanelGuide` —
 The runner is provided by the optional, separately published module:
 
 ```kotlin
-implementation("io.github.gabriel-graf:comic-cutter-onnx-jvm:0.3.1")  // pulls in onnxruntime + core
+implementation("io.github.gabriel-graf:comic-cutter-onnx-jvm:0.3.2")  // pulls in onnxruntime + core
 ```
 
 ```kotlin
