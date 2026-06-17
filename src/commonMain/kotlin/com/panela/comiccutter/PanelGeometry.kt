@@ -1,7 +1,7 @@
 package com.panela.comiccutter
 
 /** Panel in image-normalized coordinates [0..1] relative to the page. */
-data class NormRect(val left: Float, val top: Float, val width: Float, val height: Float) {
+data class NormRect(val left: Float, val top: Float, val width: Float, val height: Float, val score: Float = 1.0f) {
     val centerX: Float get() = left + width / 2f
     val centerY: Float get() = top + height / 2f
     fun contains(x: Float, y: Float): Boolean =
@@ -21,6 +21,7 @@ object PanelGeometry {
             top = panel.y.toFloat() / pageH,
             width = panel.width.toFloat() / pageW,
             height = panel.height.toFloat() / pageH,
+            score = panel.score,
         )
 
     /** Index of the panel that contains the (normalized) point, otherwise null (gutter/margin). */

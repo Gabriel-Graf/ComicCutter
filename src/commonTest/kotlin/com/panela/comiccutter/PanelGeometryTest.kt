@@ -70,4 +70,11 @@ class PanelGeometryTest {
         val scaledH = s * 0.25f * 1500f
         assertTrue(scaledW <= 1000f + 1e-3f && scaledH <= 1500f + 1e-3f, "Crop! w=$scaledW h=$scaledH")
     }
+
+    @Test
+    fun normalize_carries_score() {
+        val panel = PanelRect(x = 10, y = 20, width = 30, height = 40, score = 0.66f)
+        val norm = PanelGeometry.normalize(panel, pageW = 100, pageH = 200)
+        assertEquals(0.66f, norm.score, 0.0001f)
+    }
 }
