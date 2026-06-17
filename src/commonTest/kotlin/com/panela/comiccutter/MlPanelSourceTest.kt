@@ -22,6 +22,6 @@ class MlPanelSourceTest {
             ),
         )
         val source = MlPanelSource(runner, MlFilter(minScore = 0.3f, nmsIoU = 0.5f, minAreaFraction = 0f))
-        assertEquals(listOf(PanelRect(10, 10, 30, 30)), source.detect(page))
+        assertEquals(listOf(PanelRect(10, 10, 30, 30, 0.9f)), source.detect(page))
     }
 }

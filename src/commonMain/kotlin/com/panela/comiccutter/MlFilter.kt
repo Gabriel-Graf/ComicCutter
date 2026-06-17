@@ -22,7 +22,7 @@ data class MlFilter(
             .filter { keepClass == null || it.cls == keepClass }
             .filter { it.width.toLong() * it.height >= minArea }
             .sortedByDescending { it.score }
-        return nms(kept).map { PanelRect(it.x, it.y, it.width, it.height) }
+        return nms(kept).map { PanelRect(it.x, it.y, it.width, it.height, it.score) }
     }
 
     /** Greedy NMS: strongest first, suppresses every later box with IoU >= [nmsIoU]. */
